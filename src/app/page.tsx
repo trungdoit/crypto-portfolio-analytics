@@ -201,7 +201,6 @@ export default function Home() {
     if (portfolio) {
       for (const p of portfolio.positions) {
         const cp = p.currentPrice ? new Decimal(p.currentPrice) : undefined;
-        // @ts-expect-error DTO symbol is compatible with keys
         map[p.symbol] = cp;
       }
     }
