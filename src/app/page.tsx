@@ -15,6 +15,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Cell,
 } from "recharts";
 import { AdjustmentsHorizontalIcon, ArrowDownTrayIcon, ArrowPathIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import type { PortfolioDTO } from "@/lib/serialize";
