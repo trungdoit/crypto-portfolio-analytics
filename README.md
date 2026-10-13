@@ -76,6 +76,14 @@ Testing
     - SOL 53.3643, 11433.18, 11126.46, -2408.93, -306.72, 518.99
     - CKB 1947047, 13382.76, 13921.39, 1499.63, 538.63, 525.21
     - DOGE 63970.78, 14390.53, 15480.93, -2695.48, 1090.40, 648.58
+ - Invariant tests:
+   - Per-asset sums (value, cost basis, realized, unrealized, fees) equal portfolio totals
+   - Allocations sum to 1 (tiny epsilon)
+   - Total P&L equals realized + unrealized (per asset and overall)
+   - SELL does not change average cost of remaining position
+   - After full close, quantity/cost/avg are zero
+   - Deterministic results when input rows are shuffled (parser sorts by timestamp)
+   - Cost basis is never negative
 
 Assumptions, limitations, tradeoffs
 - No database/auth; serverless-friendly. The default experience always uses the bundled sample. Uploads are ephemeral (stored in-memory/localStorage). This keeps deploys simple on Vercel and avoids managing persistent state.
