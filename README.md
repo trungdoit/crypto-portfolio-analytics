@@ -60,12 +60,12 @@ Precision and rounding decisions
 
 Features
 - KPIs: Portfolio value, Cost basis, Realized P&L, Unrealized P&L, Total P&L, Total fees.
-- Positions in a tabbed Holdings section:
+- Tabbed layout:
   - Open positions (current holdings): Quantity, Avg cost, Price, Cost basis, Value, Realized, Unrealized, Total P&L, Allocation.
   - Closed positions (lifecycle): Asset, Opened, Closed, Trade count, Peak qty, Total cost, Proceeds, Realized P&L, Fees.
+  - Transactions: Filter by asset, exchange, side, date range; sort by timestamp; pagination; shows Gross, Fee, Realized P&L, Avg cost after, Qty after; totals footer for Gross and Fees.
 - Charts: Allocation by value; Realized vs Unrealized P&L by asset. Handles negatives.
-- Clicking any row opens a modal with per-position KPIs and its transaction history (qty/avg cost after, realized delta and cumulative).
-- Transaction explorer: Filter by asset, exchange, side, date range; sort by timestamp; pagination; shows Gross, Fee, Realized P&L, Avg cost after, Qty after; totals footer for Gross and Fees.
+- Clicking any row in Open or Closed opens a modal with per-position KPIs and its transaction history (qty/avg cost after, realized delta and cumulative).
 - States: Loading, empty, invalid import, missing prices, unexpected error. Gain/loss indicated by sign and icon, not just color.
 
 Testing
