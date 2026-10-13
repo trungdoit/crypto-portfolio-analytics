@@ -23,6 +23,7 @@ import {
   ArrowPathIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
+  CircleStackIcon,
 } from "@heroicons/react/24/outline";
 import type { PortfolioDTO } from "@/lib/serialize";
 import { colorForAsset, withAlpha } from "@/lib/colors";
@@ -237,24 +238,32 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2">
             <span
-              className="max-w-[40vw] truncate text-xs rounded-full border px-2 py-0.5 text-zinc-800 bg-zinc-50"
+              className="group relative inline-flex items-center gap-2 rounded-md border bg-zinc-50 px-3 text-xs text-zinc-800 h-9 max-w-[40vw] truncate"
               title={loadedSource === "sample" ? "Bundled sample data" : loadedTradesName}
               aria-label={`Data source: ${loadedSource === "sample" ? "Sample" : loadedTradesName}`}
             >
-              Data: {loadedSource === "sample" ? "Sample" : loadedTradesName}
+              <CircleStackIcon className="h-4 w-4 text-zinc-500" aria-hidden="true" />
+              <span className="truncate">
+                Data: {loadedSource === "sample" ? "Sample" : loadedTradesName}
+              </span>
+              <span
+                className={`ml-1 inline-block h-2 w-2 rounded-full ${
+                  loadedSource === "sample" ? "bg-zinc-400" : "bg-emerald-500"
+                }`}
+                aria-hidden="true"
+              />
             </span>
             <button
-              className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600 focus-visible:ring-offset-2"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md border text-sm hover:bg-zinc-50 active:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600 focus-visible:ring-offset-2"
               onClick={() => setInfoOpen(true)}
               title="About and rules"
               aria-haspopup="dialog"
               aria-label="Info"
             >
-              <InformationCircleIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Info</span>
+              <InformationCircleIcon className="h-5 w-5" aria-hidden="true" />
             </button>
             <button
-              className="inline-flex items-center gap-2 rounded-md bg-black text-white px-3 py-2 text-sm hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700 focus-visible:ring-offset-2"
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-black text-white px-3 text-sm hover:bg-zinc-800 active:bg-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700 focus-visible:ring-offset-2"
               onClick={() => setImportOpen(true)}
               title="Open import dialog"
               aria-haspopup="dialog"
