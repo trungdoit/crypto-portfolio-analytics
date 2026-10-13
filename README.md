@@ -30,14 +30,14 @@ Architecture and data flow
 
 ```mermaid
 flowchart TD
-  A[UI: Importer, KPIs, Holdings, Charts, Explorer] -->|POST tradesCsv/pricesCsv| B(API /api/portfolio)
-  A -->|GET| C(API /api/sample)
-  C -->|fs read| D[(data/*.csv)]
-  B --> E[lib/import: parseTradesCsv/parsePricesCsv (Zod + Papaparse)]
-  E --> F[lib/portfolio: weighted-average engine (Decimal)]
-  F --> G[lib/serialize: PortfolioDTO (decimal strings)]
+  A["UI: Importer, KPIs, Holdings, Charts, Explorer"] -->|"POST tradesCsv/pricesCsv"| B("API /api/portfolio")
+  A -->|GET| C("API /api/sample")
+  C -->|"fs read"| D[("data/*.csv")]
+  B --> E["lib/import: parseTradesCsv / parsePricesCsv (Zod + Papaparse)"]
+  E --> F["lib/portfolio: weighted-average engine (Decimal)"]
+  F --> G["lib/serialize: PortfolioDTO (decimal strings)"]
   G --> B
-  B -->|JSON DTO| A
+  B -->|"JSON DTO"| A
 ```
 
 Separation of concerns
