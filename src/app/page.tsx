@@ -29,6 +29,10 @@ export default function Home() {
   const [missingPrices, setMissingPrices] = useState<string[]>([]);
   const [pricesCsv, setPricesCsv] = useState<string | null>(null);
   const [trades, setTrades] = useState<Trade[] | null>(null);
+  const [loadedSource, setLoadedSource] = useState<"sample" | "uploaded">("sample");
+  const [loadedTradesName, setLoadedTradesName] = useState<string>("trades.csv");
+  const [loadedPricesName, setLoadedPricesName] = useState<string>("prices.csv");
+  const [importedAt, setImportedAt] = useState<string | null>(null);
   const [filters, setFilters] = useState<{ symbol: string; exchange: string; side: string; from: string; to: string }>({
     symbol: "ALL",
     exchange: "ALL",
@@ -58,6 +62,14 @@ export default function Home() {
       localStorage.setItem("portfolio.tradesCsv", tCsv);
       localStorage.setItem("portfolio.pricesCsv", pCsv);
       localStorage.setItem("portfolio.source", "sample");
+      const nowIso = new Date().toISOString();
+      localStorage.setItem("portfolio.tradesFileName", "trades.csv");
+      localStorage.setItem("portfolio.pricesFileName", "prices.csv");
+      localStorage.setItem("portfolio.importedAt", nowIso);
+      setLoadedSource("sample");
+      setLoadedTradesName("trades.csv");
+      setLoadedPricesName("prices.csv");
+      setImportedAt(nowIso);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Unexpected error");
     } finally {
@@ -70,6 +82,10 @@ export default function Home() {
     // Try to load from localStorage if present, else sample
     const savedTrades = localStorage.getItem("portfolio.tradesCsv");
     const savedPrices = localStorage.getItem("portfolio.pricesCsv");
+    const savedSource = (localStorage.getItem("portfolio.source") as "sample" | "uploaded" | null) ?? null;
+    const savedTradesName = localStorage.getItem("portfolio.tradesFileName");
+    const savedPricesName = localStorage.getItem("portfolio.pricesFileName");
+    const savedImportedAt = localStorage.getItem("portfolio.importedAt");
     if (savedTrades) {
       // Recompute via API for deterministic server math
       fetch("/api/portfolio", {
@@ -86,6 +102,10 @@ export default function Home() {
           const parsed = parseTradesCsv(savedTrades);
           if (parsed.ok) setTrades(parsed.trades);
           setError(null);
+          if (savedSource) setLoadedSource(savedSource);
+          if (savedTradesName) setLoadedTradesName(savedTradesName);
+          if (savedPricesName) setLoadedPricesName(savedPricesName);
+          if (savedImportedAt) setImportedAt(savedImportedAt);
         })
         .catch((e) => setError(e.message || "Unexpected error"))
         .finally(() => setLoading(false));
@@ -128,6 +148,14 @@ export default function Home() {
       localStorage.setItem("portfolio.tradesCsv", tCsv);
       localStorage.setItem("portfolio.pricesCsv", pCsv);
       localStorage.setItem("portfolio.source", "uploaded");
+      const nowIso = new Date().toISOString();
+      localStorage.setItem("portfolio.tradesFileName", fileTrades?.name ?? "trades.csv");
+      localStorage.setItem("portfolio.pricesFileName", filePrices?.name ?? "prices.csv");
+      localStorage.setItem("portfolio.importedAt", nowIso);
+      setLoadedSource("uploaded");
+      setLoadedTradesName(fileTrades?.name ?? "trades.csv");
+      setLoadedPricesName(filePrices?.name ?? "prices.csv");
+      setImportedAt(nowIso);
       setPage(1);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Unexpected error");
@@ -211,12 +239,38 @@ export default function Home() {
             <p className="text-sm text-zinc-600">
               Price snapshot as of: <span className="font-medium">{asOf ?? "Unknown"}</span>
             </p>
+            <p className="mt-1 text-sm text-zinc-600">
+              Currently loaded:{" "}
+              <span className="font-medium">
+                {loadedSource === "sample" ? "Bundled sample" : "Uploaded"}: {loadedTradesName}
+              </span>{" "}
+              ({trades ? `${trades.length} rows` : "—"}) • Imported at:{" "}
+              <span className="font-mono">{importedAt ? new Date(importedAt).toLocaleString() : "—"}</span>
+            </p>
             {missingPrices.length > 0 && (
               <p className="mt-1 inline-flex items-center gap-2 text-sm text-amber-700">
                 <ExclamationTriangleIcon className="h-4 w-4" />
                 Missing prices for: {missingPrices.join(", ")}
               </p>
             )}
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+              <a
+                className="rounded-md border px-2 py-1 hover:bg-zinc-50"
+                href="/data/trades.csv"
+                download
+                aria-label="Download sample trades.csv"
+              >
+                Download sample trades.csv
+              </a>
+              <a
+                className="rounded-md border px-2 py-1 hover:bg-zinc-50"
+                href="/data/prices.csv"
+                download
+                aria-label="Download sample prices.csv"
+              >
+                Download sample prices.csv
+              </a>
+            </div>
           </div>
           <ImportControls onImport={handleImport} />
         </section>
@@ -544,6 +598,9 @@ function ImportControls({ onImport }: { onImport: (trades: File | null, prices: 
           aria-label="Upload trades CSV"
         />
       </label>
+      <span className="text-xs text-zinc-600" aria-live="polite">
+        {tradesFile ? `Selected: ${tradesFile.name}` : "No trades file selected"}
+      </span>
       <label className="flex items-center gap-2 text-sm">
         <ArrowDownTrayIcon className="h-4 w-4" />
         <input
@@ -553,6 +610,9 @@ function ImportControls({ onImport }: { onImport: (trades: File | null, prices: 
           aria-label="Upload prices CSV (optional)"
         />
       </label>
+      <span className="text-xs text-zinc-600" aria-live="polite">
+        {pricesFile ? `Selected: ${pricesFile.name}` : "No prices file selected"}
+      </span>
       <button
         className="rounded-md bg-black px-3 py-2 text-sm text-white hover:bg-zinc-800 disabled:opacity-50"
         onClick={() => onImport(tradesFile, pricesFile)}
