@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, errors: parsed.errors }, { status: 400 });
     }
   } catch (e: unknown) {
-    const message = typeof e === "object" && e && "message" in e ? String((e as any).message) : "Unexpected error";
+    const message = e instanceof Error ? e.message : "Unexpected error";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

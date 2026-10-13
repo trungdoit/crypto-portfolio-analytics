@@ -24,7 +24,6 @@ export default function Home() {
   const [portfolio, setPortfolio] = useState<PortfolioDTO | null>(null);
   const [asOf, setAsOf] = useState<string | null>(null);
   const [missingPrices, setMissingPrices] = useState<string[]>([]);
-  const [tradesCsv, setTradesCsv] = useState<string | null>(null);
   const [pricesCsv, setPricesCsv] = useState<string | null>(null);
   const [trades, setTrades] = useState<Trade[] | null>(null);
   const [filters, setFilters] = useState<{ symbol: string; exchange: string; side: string; from: string; to: string }>({
@@ -49,7 +48,6 @@ export default function Home() {
       setMissingPrices(json.data.missingPriceSymbols ?? []);
       // Load sample CSVs too for transaction explorer and reset
       const [tCsv, pCsv] = await Promise.all([fetch("/data/trades.csv").then((r) => r.text()), fetch("/data/prices.csv").then((r) => r.text())]);
-      setTradesCsv(tCsv);
       setPricesCsv(pCsv);
       const parsed = parseTradesCsv(tCsv);
       if (parsed.ok) setTrades(parsed.trades);
@@ -57,8 +55,8 @@ export default function Home() {
       localStorage.setItem("portfolio.tradesCsv", tCsv);
       localStorage.setItem("portfolio.pricesCsv", pCsv);
       localStorage.setItem("portfolio.source", "sample");
-    } catch (e: any) {
-      setError(e.message || "Unexpected error");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Unexpected error");
     } finally {
       setLoading(false);
       setPage(1);
@@ -89,7 +87,8 @@ export default function Home() {
         .catch((e) => setError(e.message || "Unexpected error"))
         .finally(() => setLoading(false));
     } else {
-      loadSample();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void loadSample();
     }
   }, []);
 
@@ -120,7 +119,6 @@ export default function Home() {
       setPortfolio(json.data);
       setAsOf(json.data.asOf);
       setMissingPrices(json.data.missingPriceSymbols ?? []);
-      setTradesCsv(tCsv);
       setPricesCsv(pCsv);
       const parsed = parseTradesCsv(tCsv);
       if (parsed.ok) setTrades(parsed.trades);
@@ -128,8 +126,8 @@ export default function Home() {
       localStorage.setItem("portfolio.pricesCsv", pCsv);
       localStorage.setItem("portfolio.source", "uploaded");
       setPage(1);
-    } catch (e: any) {
-      setError(e.message || "Unexpected error");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Unexpected error");
     } finally {
       setLoading(false);
     }
@@ -167,13 +165,20 @@ export default function Home() {
     [positions]
   );
 
+  const symbols = ["BTC", "ETH", "SOL", "CKB", "DOGE"] as const;
+  const exchanges = ["Binance", "Coinbase"] as const;
+  const sides = ["BUY", "SELL"] as const;
+  type AssetSymbol = typeof symbols[number];
+  type Exchange = typeof exchanges[number];
+  type Side = typeof sides[number];
+
   const filteredTrades = useMemo(() => {
     if (!trades) return [];
     const { symbol, exchange, side, from, to } = filters;
     return trades
-      .filter((t) => (symbol === "ALL" ? true : t.symbol === (symbol as any)))
-      .filter((t) => (exchange === "ALL" ? true : t.exchange === (exchange as any)))
-      .filter((t) => (side === "ALL" ? true : t.side === (side as any)))
+      .filter((t) => (symbol === "ALL" ? true : t.symbol === (symbol as AssetSymbol)))
+      .filter((t) => (exchange === "ALL" ? true : t.exchange === (exchange as Exchange)))
+      .filter((t) => (side === "ALL" ? true : t.side === (side as Side)))
       .filter((t) => (from ? t.timestamp >= new Date(from).toISOString() : true))
       .filter((t) => (to ? t.timestamp <= new Date(to).toISOString() : true))
       .sort((a, b) => (a.timestamp < b.timestamp ? -1 : a.timestamp > b.timestamp ? 1 : 0));
