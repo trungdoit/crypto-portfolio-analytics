@@ -165,12 +165,9 @@ export default function Home() {
     [positions]
   );
 
-  const symbols = ["BTC", "ETH", "SOL", "CKB", "DOGE"] as const;
-  const exchanges = ["Binance", "Coinbase"] as const;
-  const sides = ["BUY", "SELL"] as const;
-  type AssetSymbol = typeof symbols[number];
-  type Exchange = typeof exchanges[number];
-  type Side = typeof sides[number];
+  type AssetSymbol = "BTC" | "ETH" | "SOL" | "CKB" | "DOGE";
+  type Exchange = "Binance" | "Coinbase";
+  type Side = "BUY" | "SELL";
 
   const filteredTrades = useMemo(() => {
     if (!trades) return [];
