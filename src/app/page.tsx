@@ -227,42 +227,47 @@ export default function Home() {
 
   return (
     <div className="min-h-screen w-full bg-zinc-50 text-zinc-900">
-      <header className="border-b bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Crypto Portfolio Analytics</h1>
+      <header className="sticky top-0 z-40 border-b bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70">
+        <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold leading-6">Crypto Portfolio Analytics</h1>
+            <p className="mt-0.5 text-[11px] text-zinc-600">
+              Price snapshot as of: <span className="font-mono">{asOf ?? "Unknown"}</span>
+            </p>
+          </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs rounded-full border px-2 py-0.5 text-zinc-700 bg-zinc-50">
-              {loadedSource === "sample" ? "Sample data" : "Uploaded data"}
+            <span
+              className="max-w-[40vw] truncate text-xs rounded-full border px-2 py-0.5 text-zinc-800 bg-zinc-50"
+              title={loadedSource === "sample" ? "Bundled sample data" : loadedTradesName}
+              aria-label={`Data source: ${loadedSource === "sample" ? "Sample" : loadedTradesName}`}
+            >
+              Data: {loadedSource === "sample" ? "Sample" : loadedTradesName}
             </span>
             <button
-              className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-zinc-50"
+              className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-600 focus-visible:ring-offset-2"
               onClick={() => setInfoOpen(true)}
               title="About and rules"
               aria-haspopup="dialog"
+              aria-label="Info"
             >
               <InformationCircleIcon className="h-4 w-4" />
-              Info
+              <span className="hidden sm:inline">Info</span>
             </button>
             <button
-              className="inline-flex items-center gap-2 rounded-md bg-black text-white px-3 py-2 text-sm hover:bg-zinc-800"
+              className="inline-flex items-center gap-2 rounded-md bg-black text-white px-3 py-2 text-sm hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700 focus-visible:ring-offset-2"
               onClick={() => setImportOpen(true)}
               title="Open import dialog"
               aria-haspopup="dialog"
+              aria-label="Import data"
             >
               <ArrowDownTrayIcon className="h-4 w-4" />
-              Import data
+              <span className="hidden sm:inline">Import data</span>
             </button>
           </div>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-6">
-        {/* Price as_of lightweight indicator */}
-        <section className="mb-4">
-          <p className="text-xs text-zinc-600">
-            Price snapshot as of: <span className="font-mono">{asOf ?? "Unknown"}</span>
-          </p>
-        </section>
-        {/* Modal trigger is in header; indicator badge shown. */}
+        {/* Modal trigger and indicators are in the header */}
 
         {/* Loading / error / empty states */}
         {loading && (
