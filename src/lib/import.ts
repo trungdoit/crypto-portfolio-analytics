@@ -72,7 +72,7 @@ export function parseTradesCsv(csvText: string): ImportResult {
         errors.push({
           rowNumber: csvRowNumber,
           code: issue.path[0] === "timestamp" ? "InvalidTimestamp" : "UnsupportedValue",
-          field: issue.path[0]?.toString(),
+          field: issue.path[0] != null ? String(issue.path[0]) : undefined,
           message: `Invalid value for ${issue.path[0] || "field"}: ${issue.message}`,
         });
       }
