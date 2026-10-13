@@ -55,11 +55,7 @@ export default function Home() {
   });
   const [page, setPage] = useState(1);
   const pageSize = 20;
-  const [activeTab, setActiveTab] = useState<"positions" | "transactions">("positions");
-  const [posFilters, setPosFilters] = useState<{ status: "ALL" | "OPEN" | "CLOSED"; symbol: string }>({
-    status: "ALL",
-    symbol: "ALL",
-  });
+  const [holdingsTab, setHoldingsTab] = useState<"open" | "closed">("open");
   const [selectedPositionId, setSelectedPositionId] = useState<string | null>(null);
 
   async function loadSample() {
@@ -205,7 +201,7 @@ export default function Home() {
     if (portfolio) {
       for (const p of portfolio.positions) {
         const cp = p.currentPrice ? new Decimal(p.currentPrice) : undefined;
-        // @ts-ignore DTO symbol is compatible with keys
+        // @ts-expect-error DTO symbol is compatible with keys
         map[p.symbol] = cp;
       }
     }
@@ -221,16 +217,22 @@ export default function Home() {
     return resolvePositions(trades, clientPrices);
   }, [trades, portfolio, clientPrices]);
 
-  const filteredLifecyclePositions = useMemo(() => {
-    return lifecyclePositions
-      .filter((p) => (posFilters.status === "ALL" ? true : p.status === posFilters.status))
-      .filter((p) => (posFilters.symbol === "ALL" ? true : p.asset === (posFilters.symbol as any)));
-  }, [lifecyclePositions, posFilters]);
+  const openLifecycleByAsset = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof resolvePositions>[number]>();
+    for (const p of lifecyclePositions) {
+      if (p.status === "OPEN") m.set(p.asset, p);
+    }
+    return m;
+  }, [lifecyclePositions]);
 
   const positions = useMemo(() => {
     if (!portfolio) return [];
     // Keep closed assets with nonzero realized P&L
     return portfolio.positions.filter((p) => new Decimal(p.quantity || "0").greaterThan(0) || !new Decimal(p.realizedPnL || "0").equals(0));
+  }, [portfolio]);
+  const openHoldings = useMemo(() => {
+    if (!portfolio) return [];
+    return portfolio.positions.filter((p) => new Decimal(p.quantity || "0").greaterThan(0));
   }, [portfolio]);
 
   const allocationData = useMemo(
@@ -373,59 +375,132 @@ export default function Home() {
               <Kpi title="Total Fees" value={formatCurrency(new Decimal(portfolio.totals.fees || "0"))} />
             </section>
 
-            {/* Holdings table */}
+            {/* Positions (Holdings) */}
             <section className="mb-8">
               <div className="mb-2 flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Holdings</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold">Positions</h2>
+                  <div className="ml-2 inline-flex items-center gap-2">
+                    <button
+                      className={`rounded-md border px-2 py-1 text-xs ${holdingsTab === "open" ? "bg-black text-white border-black" : "bg-white hover:bg-zinc-50"}`}
+                      onClick={() => setHoldingsTab("open")}
+                    >
+                      Open positions
+                    </button>
+                    <button
+                      className={`rounded-md border px-2 py-1 text-xs ${holdingsTab === "closed" ? "bg-black text-white border-black" : "bg-white hover:bg-zinc-50"}`}
+                      onClick={() => setHoldingsTab("closed")}
+                    >
+                      Closed positions
+                    </button>
+                  </div>
+                </div>
                 <span className="text-xs text-zinc-600">Sign and arrow indicate gain/loss</span>
               </div>
-              <div className="overflow-x-auto rounded-md border bg-white">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-zinc-50 text-left">
-                    <tr>
-                      <Th>Asset</Th>
-                      <Th>Qty</Th>
-                      <Th>Avg Cost</Th>
-                      <Th>Price</Th>
-                      <Th>Cost Basis</Th>
-                      <Th>Value</Th>
-                      <Th>Realized</Th>
-                      <Th>Unrealized</Th>
-                      <Th>Total P&L</Th>
-                      <Th>Allocation</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {positions.map((p) => {
-                      const pos = new Decimal(p.totalPnL || "0");
-                      const icon = pos.isPositive() ? "▲" : pos.isNegative() ? "▼" : "•";
-                      return (
-                        <tr key={p.symbol} className="border-t">
-                          <Td className="font-medium">{p.symbol}</Td>
-                          <Td>{formatQuantity(new Decimal(p.quantity || "0"))}</Td>
-                          <Td>{p.quantity === "0" ? "$0.00" : formatCurrency(new Decimal(p.averageCost || "0"))}</Td>
-                          <Td>{p.currentPrice ? formatCurrency(new Decimal(p.currentPrice)) : "—"}</Td>
-                          <Td>{formatCurrency(new Decimal(p.costBasis || "0"))}</Td>
-                          <Td>{formatCurrency(new Decimal(p.value || "0"))}</Td>
-                          <Td className={new Decimal(p.realizedPnL || "0").isNegative() ? "text-red-700" : "text-emerald-700"}>
-                            {new Decimal(p.realizedPnL || "0").isNegative() ? "−" : "+"}
-                            {formatCurrency(new Decimal(p.realizedPnL || "0").abs())} {icon}
-                          </Td>
-                          <Td className={new Decimal(p.unrealizedPnL || "0").isNegative() ? "text-red-700" : "text-emerald-700"}>
-                            {new Decimal(p.unrealizedPnL || "0").isNegative() ? "−" : "+"}
-                            {formatCurrency(new Decimal(p.unrealizedPnL || "0").abs())}
-                          </Td>
-                          <Td className={pos.isNegative() ? "text-red-700" : "text-emerald-700"}>
-                            {pos.isNegative() ? "−" : "+"}
-                            {formatCurrency(pos.abs())}
-                          </Td>
-                          <Td>{formatPercent(new Decimal(p.allocation || "0"))}</Td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              {holdingsTab === "open" ? (
+                <div className="overflow-x-auto rounded-md border bg-white">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-zinc-50 text-left">
+                      <tr>
+                        <Th>Asset</Th>
+                        <Th>Qty</Th>
+                        <Th>Avg Cost</Th>
+                        <Th>Price</Th>
+                        <Th>Cost Basis</Th>
+                        <Th>Value</Th>
+                        <Th>Realized</Th>
+                        <Th>Unrealized</Th>
+                        <Th>Total P&L</Th>
+                        <Th>Allocation</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {openHoldings.map((p) => {
+                        const pos = new Decimal(p.totalPnL || "0");
+                        const icon = pos.isPositive() ? "▲" : pos.isNegative() ? "▼" : "•";
+                        const openPos = openLifecycleByAsset.get(p.symbol);
+                        return (
+                          <tr
+                            key={p.symbol}
+                            className={`border-t ${openPos ? "hover:bg-zinc-50 cursor-pointer" : ""}`}
+                            onClick={() => openPos && setSelectedPositionId(openPos.id)}
+                          >
+                            <Td className="font-medium">{p.symbol}</Td>
+                            <Td>{formatQuantity(new Decimal(p.quantity || "0"))}</Td>
+                            <Td>{p.quantity === "0" ? "$0.00" : formatCurrency(new Decimal(p.averageCost || "0"))}</Td>
+                            <Td>{p.currentPrice ? formatCurrency(new Decimal(p.currentPrice)) : "—"}</Td>
+                            <Td>{formatCurrency(new Decimal(p.costBasis || "0"))}</Td>
+                            <Td>{formatCurrency(new Decimal(p.value || "0"))}</Td>
+                            <Td className={new Decimal(p.realizedPnL || "0").isNegative() ? "text-red-700" : "text-emerald-700"}>
+                              {new Decimal(p.realizedPnL || "0").isNegative() ? "−" : "+"}
+                              {formatCurrency(new Decimal(p.realizedPnL || "0").abs())} {icon}
+                            </Td>
+                            <Td className={new Decimal(p.unrealizedPnL || "0").isNegative() ? "text-red-700" : "text-emerald-700"}>
+                              {new Decimal(p.unrealizedPnL || "0").isNegative() ? "−" : "+"}
+                              {formatCurrency(new Decimal(p.unrealizedPnL || "0").abs())}
+                            </Td>
+                            <Td className={pos.isNegative() ? "text-red-700" : "text-emerald-700"}>
+                              {pos.isNegative() ? "−" : "+"}
+                              {formatCurrency(pos.abs())}
+                            </Td>
+                            <Td>{formatPercent(new Decimal(p.allocation || "0"))}</Td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-md border bg-white">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-zinc-50 text-left">
+                      <tr>
+                        <Th>Asset</Th>
+                        <Th>Opened</Th>
+                        <Th>Closed</Th>
+                        <Th>Trades</Th>
+                        <Th>Peak Qty</Th>
+                        <Th>Total Cost</Th>
+                        <Th>Proceeds</Th>
+                        <Th>Realized P&L</Th>
+                        <Th>Fees</Th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lifecyclePositions
+                        .filter((p) => p.status === "CLOSED")
+                        .map((p) => {
+                          const totalCost = p.trades
+                            .filter((t) => t.side === "BUY")
+                            .reduce((acc, t) => acc.add(t.quantity.mul(t.priceUsd).add(t.feeUsd)), new Decimal(0));
+                          const proceeds = p.trades
+                            .filter((t) => t.side === "SELL")
+                            .reduce((acc, t) => acc.add(t.quantity.mul(t.priceUsd).sub(t.feeUsd)), new Decimal(0));
+                          return (
+                            <tr
+                              key={p.id}
+                              className="border-t hover:bg-zinc-50 cursor-pointer"
+                              onClick={() => setSelectedPositionId(p.id)}
+                            >
+                              <Td className="font-medium">{p.asset}</Td>
+                              <Td>{new Date(p.openedAt).toLocaleString()}</Td>
+                              <Td>{p.closedAt ? new Date(p.closedAt).toLocaleString() : "—"}</Td>
+                              <Td className="text-center">{p.tradeCount}</Td>
+                              <Td>{formatQuantity(p.peakQuantity)}</Td>
+                              <Td>{formatCurrency(totalCost)}</Td>
+                              <Td>{formatCurrency(proceeds)}</Td>
+                              <Td className={p.realizedPnL.isNegative() ? "text-red-700" : "text-emerald-700"}>
+                                {p.realizedPnL.isNegative() ? "−" : "+"}
+                                {formatCurrency(p.realizedPnL.abs())}
+                              </Td>
+                              <Td>{formatCurrency(p.totalFees)}</Td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
 
             {/* Charts */}
@@ -473,109 +548,8 @@ export default function Home() {
               </div>
             </section>
 
-            {/* Tabs: Positions | Transactions */}
+            {/* Transaction explorer */}
             <section className="mb-24">
-              <div className="mb-3 flex items-center gap-2">
-                <button
-                  className={`rounded-md border px-3 py-1.5 text-sm ${activeTab === "positions" ? "bg-black text-white border-black" : "bg-white hover:bg-zinc-50"}`}
-                  onClick={() => setActiveTab("positions")}
-                >
-                  Positions
-                </button>
-                <button
-                  className={`rounded-md border px-3 py-1.5 text-sm ${activeTab === "transactions" ? "bg-black text-white border-black" : "bg-white hover:bg-zinc-50"}`}
-                  onClick={() => setActiveTab("transactions")}
-                >
-                  Transactions
-                </button>
-              </div>
-              {activeTab === "positions" ? (
-                <>
-                  <div className="mb-2 flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Positions</h2>
-                    <div className="flex items-center gap-2">
-                      <select
-                        className="rounded-md border px-2 py-1 text-sm"
-                        value={posFilters.status}
-                        onChange={(e) => setPosFilters((f) => ({ ...f, status: e.target.value as any }))}
-                      >
-                        <option value="ALL">All</option>
-                        <option value="OPEN">Open</option>
-                        <option value="CLOSED">Closed</option>
-                      </select>
-                      <select
-                        className="rounded-md border px-2 py-1 text-sm"
-                        value={posFilters.symbol}
-                        onChange={(e) => setPosFilters((f) => ({ ...f, symbol: e.target.value }))}
-                      >
-                        <option value="ALL">All assets</option>
-                        {["BTC", "ETH", "SOL", "CKB", "DOGE"].map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="overflow-x-auto rounded-md border bg-white">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-zinc-50 text-left">
-                        <tr>
-                          <Th>Status</Th>
-                          <Th>Asset</Th>
-                          <Th>Opened</Th>
-                          <Th>Closed</Th>
-                          <Th>Trades</Th>
-                          <Th>Current Qty</Th>
-                          <Th>Peak Qty</Th>
-                          <Th>Avg Cost</Th>
-                          <Th>Cost Basis</Th>
-                          <Th>Realized</Th>
-                          <Th>Unrealized</Th>
-                          <Th>Fees</Th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredLifecyclePositions.map((p) => {
-                          const statusClass =
-                            p.status === "OPEN"
-                              ? "inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-emerald-600/20"
-                              : "inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-700 ring-1 ring-zinc-400/30";
-                          return (
-                            <tr
-                              key={p.id}
-                              className="border-t hover:bg-zinc-50 cursor-pointer"
-                              onClick={() => setSelectedPositionId(p.id)}
-                            >
-                              <Td>
-                                <span className={statusClass}>{p.status}</span>
-                              </Td>
-                              <Td className="font-medium">{p.asset}</Td>
-                              <Td>{new Date(p.openedAt).toLocaleString()}</Td>
-                              <Td>{p.closedAt ? new Date(p.closedAt).toLocaleString() : "—"}</Td>
-                              <Td className="text-center">{p.tradeCount}</Td>
-                              <Td>{formatQuantity(p.currentQuantity)}</Td>
-                              <Td>{formatQuantity(p.peakQuantity)}</Td>
-                              <Td>{formatCurrency(p.averageCost)}</Td>
-                              <Td>{formatCurrency(p.costBasis)}</Td>
-                              <Td className={p.realizedPnL.isNegative() ? "text-red-700" : "text-emerald-700"}>
-                                {p.realizedPnL.isNegative() ? "−" : "+"}
-                                {formatCurrency(p.realizedPnL.abs())}
-                              </Td>
-                              <Td className={p.unrealizedPnL.isNegative() ? "text-red-700" : "text-emerald-700"}>
-                                {p.unrealizedPnL.isNegative() ? "−" : "+"}
-                                {formatCurrency(p.unrealizedPnL.abs())}
-                              </Td>
-                              <Td>{formatCurrency(p.totalFees)}</Td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              ) : (
-                <>
                   <div className="mb-2 flex items-center justify-between">
                     <h2 className="text-lg font-semibold">Transaction Explorer</h2>
                     <div className="flex items-center gap-2 text-sm text-zinc-600">
@@ -728,8 +702,6 @@ export default function Home() {
                       </button>
                     </div>
                   </div>
-                </>
-              )}
             </section>
           </>
         )}

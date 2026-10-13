@@ -109,5 +109,24 @@ describe("positions engine - splitting and aggregation", () => {
     const realizedSum = positions.reduce((acc, p) => acc.add(p.realizedPnL), new Decimal(0));
     expect(realizedSum.toFixed()).toBe(portfolio.totals.realized.toFixed());
   });
+
+  it("modal data consistency: last cumulativeRealized equals position.realized on closed positions", () => {
+    const trades: Trade[] = [
+      t("1", "2026-01-01T00:00:00Z", "ETH", "BUY", 2, 100, 1), // cost 201
+      t("2", "2026-01-02T00:00:00Z", "ETH", "SELL", 2, 120, 2), // proceeds 240-2=238; realized 238-201=37
+    ];
+    const prices: PricesSnapshot = {
+      asOf: "2026-01-03T00:00:00Z",
+      pricesBySymbol: { BTC: undefined, ETH: new Decimal(119), SOL: undefined, CKB: undefined, DOGE: undefined },
+      missingSymbols: ["BTC", "SOL", "CKB", "DOGE"],
+    };
+    const positions = resolvePositions(trades, prices).filter((p) => p.asset === "ETH");
+    expect(positions.length).toBe(1);
+    const pos = positions[0];
+    expect(pos.status).toBe("CLOSED");
+    const last = pos.trades[pos.trades.length - 1];
+    expect(last.cumulativeRealized.toFixed()).toBe(pos.realizedPnL.toFixed());
+    expect(last.afterQuantity.toFixed()).toBe("0");
+  });
 });
 
