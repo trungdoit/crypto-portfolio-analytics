@@ -1,4 +1,4 @@
-\"use client\";
+"use client";
 import { useEffect, useMemo, useState } from "react";
 import { formatCurrency, formatPercent, formatQuantity } from "@/lib/format";
 import { Trade } from "@/lib/types";
