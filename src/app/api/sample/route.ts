@@ -17,8 +17,9 @@ export async function GET() {
     const prices = parsePricesCsv(pricesCsv);
     const portfolio = computePortfolio(parsedTrades.trades, prices);
     return NextResponse.json({ ok: true, data: portfolioToJson(portfolio) }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? "Failed to load sample data" }, { status: 500 });
+  } catch (e: unknown) {
+    const message = typeof e === "object" && e && "message" in e ? String((e as any).message) : "Failed to load sample data";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
 

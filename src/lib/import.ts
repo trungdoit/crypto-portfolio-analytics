@@ -5,6 +5,7 @@ import {
   ImportResult,
   PriceCsvSchema,
   PricesSnapshot,
+  PriceCsvRow,
   Trade,
   TradeCsvRow,
   TradeCsvSchema,
@@ -184,7 +185,7 @@ export function parsePricesCsv(csvText: string): PricesSnapshot {
     },
   });
 
-  const rows: Array<{ as_of: string; symbol: string; price_usd: string }> = result.data as any;
+  const rows: PriceCsvRow[] = result.data as PriceCsvRow[];
   // Validate and collect
   const pricesBySymbol: PricesSnapshot["pricesBySymbol"] = {
     BTC: undefined,

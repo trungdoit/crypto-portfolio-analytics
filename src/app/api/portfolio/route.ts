@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 import { TradeCsvSchema, PriceCsvSchema } from "@/lib/types";
 import { parsePricesCsv, parseTradesCsv } from "@/lib/import";
@@ -8,11 +9,6 @@ import { portfolioToJson } from "@/lib/serialize";
 const JsonRequestSchema = z.object({
   trades: z.array(TradeCsvSchema),
   prices: z.array(PriceCsvSchema),
-});
-
-const CsvRequestSchema = z.object({
-  tradesCsv: z.string().min(1),
-  pricesCsv: z.string().min(1),
 });
 
 export async function POST(req: NextRequest) {
@@ -50,8 +46,9 @@ export async function POST(req: NextRequest) {
     const prices = parsePricesCsv(pricesText);
     const portfolio = computePortfolio(parsedTrades.trades, prices);
     return NextResponse.json({ ok: true, data: portfolioToJson(portfolio) }, { status: 200 });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? "Unexpected error" }, { status: 500 });
+  } catch (e: unknown) {
+    const message = typeof e === "object" && e && "message" in e ? String((e as any).message) : "Unexpected error";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
 

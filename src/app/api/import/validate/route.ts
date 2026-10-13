@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { parseTradesCsv } from "@/lib/import";
 
 export async function POST(req: NextRequest) {
@@ -10,8 +11,9 @@ export async function POST(req: NextRequest) {
     } else {
       return NextResponse.json({ ok: false, errors: parsed.errors }, { status: 400 });
     }
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? "Unexpected error" }, { status: 500 });
+  } catch (e: unknown) {
+    const message = typeof e === "object" && e && "message" in e ? String((e as any).message) : "Unexpected error";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
 

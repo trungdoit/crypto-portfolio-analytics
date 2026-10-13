@@ -4,13 +4,6 @@ import path from "path";
 import { parsePricesCsv, parseTradesCsv } from "../src/lib/import";
 import { computePortfolio } from "../src/lib/portfolio";
 
-function to2(n: string) {
-  // normalize decimal string to 2dp
-  // avoid rounding differences due to trailing zeros
-  const v = Number(n);
-  return v.toFixed(2);
-}
-
 describe("full-dataset reconciliation", () => {
   it("matches expected totals and per-asset numbers", () => {
     const tradesCsv = readFileSync(path.join(process.cwd(), "data", "trades.csv"), "utf8");

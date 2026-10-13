@@ -1,8 +1,7 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useMemo, useState } from "react";
 import { formatCurrency, formatPercent, formatQuantity } from "@/lib/format";
-import { Trade, TradeCsvRow } from "@/lib/types";
-import { parsePricesCsv, parseTradesCsv } from "@/lib/import";
+import { Trade } from "@/lib/types";
+import { parseTradesCsv } from "@/lib/import";
 import Decimal from "decimal.js";
 import {
   Bar,
@@ -16,13 +15,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import Papa from "papaparse";
 import { AdjustmentsHorizontalIcon, ArrowDownTrayIcon, ArrowPathIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import type { PortfolioDTO } from "@/lib/serialize";
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [portfolio, setPortfolio] = useState<any | null>(null);
+  const [portfolio, setPortfolio] = useState<PortfolioDTO | null>(null);
   const [asOf, setAsOf] = useState<string | null>(null);
   const [missingPrices, setMissingPrices] = useState<string[]>([]);
   const [tradesCsv, setTradesCsv] = useState<string | null>(null);
@@ -72,7 +71,6 @@ export default function Home() {
     const savedPrices = localStorage.getItem("portfolio.pricesCsv");
     if (savedTrades) {
       // Recompute via API for deterministic server math
-      setLoading(true);
       fetch("/api/portfolio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,24 +145,24 @@ export default function Home() {
   const positions = useMemo(() => {
     if (!portfolio) return [];
     // Keep closed assets with nonzero realized P&L
-    return portfolio.positions.filter((p: any) => new Decimal(p.quantity).greaterThan(0) || !new Decimal(p.realizedPnL).equals(0));
+    return portfolio.positions.filter((p) => new Decimal(p.quantity || "0").greaterThan(0) || !new Decimal(p.realizedPnL || "0").equals(0));
   }, [portfolio]);
 
   const allocationData = useMemo(
     () =>
-      positions.map((p: any) => ({
+      positions.map((p) => ({
         name: p.symbol,
-        value: Number(new Decimal(p.value).toFixed(2)),
+        value: Number(new Decimal(p.value || "0").toFixed(2)),
       })),
     [positions]
   );
 
   const pnlByAsset = useMemo(
     () =>
-      positions.map((p: any) => ({
+      positions.map((p) => ({
         symbol: p.symbol,
-        realized: Number(new Decimal(p.realizedPnL).toFixed(2)),
-        unrealized: Number(new Decimal(p.unrealizedPnL).toFixed(2)),
+        realized: Number(new Decimal(p.realizedPnL || "0").toFixed(2)),
+        unrealized: Number(new Decimal(p.unrealizedPnL || "0").toFixed(2)),
       })),
     [positions]
   );
@@ -280,30 +278,30 @@ export default function Home() {
                     </tr>
                   </thead>
                   <tbody>
-                    {positions.map((p: any) => {
-                      const pos = new Decimal(p.totalPnL);
+                    {positions.map((p) => {
+                      const pos = new Decimal(p.totalPnL || "0");
                       const icon = pos.isPositive() ? "▲" : pos.isNegative() ? "▼" : "•";
                       return (
                         <tr key={p.symbol} className="border-t">
                           <Td className="font-medium">{p.symbol}</Td>
-                          <Td>{formatQuantity(new Decimal(p.quantity))}</Td>
-                          <Td>{p.quantity === "0" ? "$0.00" : formatCurrency(new Decimal(p.averageCost))}</Td>
+                          <Td>{formatQuantity(new Decimal(p.quantity || "0"))}</Td>
+                          <Td>{p.quantity === "0" ? "$0.00" : formatCurrency(new Decimal(p.averageCost || "0"))}</Td>
                           <Td>{p.currentPrice ? formatCurrency(new Decimal(p.currentPrice)) : "—"}</Td>
-                          <Td>{formatCurrency(new Decimal(p.costBasis))}</Td>
-                          <Td>{formatCurrency(new Decimal(p.value))}</Td>
-                          <Td className={new Decimal(p.realizedPnL).isNegative() ? "text-red-700" : "text-emerald-700"}>
-                            {new Decimal(p.realizedPnL).isNegative() ? "−" : "+"}
-                            {formatCurrency(new Decimal(p.realizedPnL).abs())} {icon}
+                          <Td>{formatCurrency(new Decimal(p.costBasis || "0"))}</Td>
+                          <Td>{formatCurrency(new Decimal(p.value || "0"))}</Td>
+                          <Td className={new Decimal(p.realizedPnL || "0").isNegative() ? "text-red-700" : "text-emerald-700"}>
+                            {new Decimal(p.realizedPnL || "0").isNegative() ? "−" : "+"}
+                            {formatCurrency(new Decimal(p.realizedPnL || "0").abs())} {icon}
                           </Td>
-                          <Td className={new Decimal(p.unrealizedPnL).isNegative() ? "text-red-700" : "text-emerald-700"}>
-                            {new Decimal(p.unrealizedPnL).isNegative() ? "−" : "+"}
-                            {formatCurrency(new Decimal(p.unrealizedPnL).abs())}
+                          <Td className={new Decimal(p.unrealizedPnL || "0").isNegative() ? "text-red-700" : "text-emerald-700"}>
+                            {new Decimal(p.unrealizedPnL || "0").isNegative() ? "−" : "+"}
+                            {formatCurrency(new Decimal(p.unrealizedPnL || "0").abs())}
                           </Td>
                           <Td className={pos.isNegative() ? "text-red-700" : "text-emerald-700"}>
                             {pos.isNegative() ? "−" : "+"}
                             {formatCurrency(pos.abs())}
                           </Td>
-                          <Td>{formatPercent(new Decimal(p.allocation))}</Td>
+                          <Td>{formatPercent(new Decimal(p.allocation || "0"))}</Td>
                         </tr>
                       );
                     })}

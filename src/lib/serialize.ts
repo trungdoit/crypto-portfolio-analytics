@@ -6,7 +6,34 @@ function s(d: Decimal | undefined | null): string | null {
   return d.toFixed(); // full precision string
 }
 
-export function portfolioToJson(p: Portfolio) {
+export type PortfolioDTO = {
+  asOf: string | null;
+  missingPriceSymbols: string[];
+  totals: {
+    value: string | null;
+    costBasis: string | null;
+    realized: string | null;
+    unrealized: string | null;
+    totalPnL: string | null;
+    fees: string | null;
+  };
+  positions: Array<{
+    symbol: "BTC" | "ETH" | "SOL" | "CKB" | "DOGE";
+    quantity: string | null;
+    averageCost: string | null;
+    costBasis: string | null;
+    value: string | null;
+    currentPrice: string | null;
+    realizedPnL: string | null;
+    unrealizedPnL: string | null;
+    totalPnL: string | null;
+    fees: string | null;
+    allocation: string | null;
+    closedButHasRealizedPnL: boolean;
+  }>;
+};
+
+export function portfolioToJson(p: Portfolio): PortfolioDTO {
   return {
     asOf: p.asOf,
     missingPriceSymbols: p.missingPriceSymbols,
@@ -18,7 +45,7 @@ export function portfolioToJson(p: Portfolio) {
       totalPnL: s(p.totals.totalPnL),
       fees: s(p.totals.fees),
     },
-    positions: p.positions.map((pos) => ({
+    positions: p.positions.map((pos): PortfolioDTO["positions"][number] => ({
       symbol: pos.symbol,
       quantity: s(pos.quantity),
       averageCost: s(pos.averageCost),
