@@ -17,7 +17,13 @@ import {
   YAxis,
   Cell,
 } from "recharts";
-import { AdjustmentsHorizontalIcon, ArrowDownTrayIcon, ArrowPathIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import {
+  AdjustmentsHorizontalIcon,
+  ArrowDownTrayIcon,
+  ArrowPathIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+} from "@heroicons/react/24/outline";
 import type { PortfolioDTO } from "@/lib/serialize";
 import { colorForAsset, withAlpha } from "@/lib/colors";
 
@@ -36,6 +42,7 @@ export default function Home() {
   const [tradesFile, setTradesFile] = useState<File | null>(null);
   const [pricesFile, setPricesFile] = useState<File | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [filters, setFilters] = useState<{ symbol: string; exchange: string; side: string; from: string; to: string }>({
     symbol: "ALL",
     exchange: "ALL",
@@ -227,6 +234,15 @@ export default function Home() {
             <span className="text-xs rounded-full border px-2 py-0.5 text-zinc-700 bg-zinc-50">
               {loadedSource === "sample" ? "Sample data" : "Uploaded data"}
             </span>
+            <button
+              className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-zinc-50"
+              onClick={() => setInfoOpen(true)}
+              title="About and rules"
+              aria-haspopup="dialog"
+            >
+              <InformationCircleIcon className="h-4 w-4" />
+              Info
+            </button>
             <button
               className="inline-flex items-center gap-2 rounded-md bg-black text-white px-3 py-2 text-sm hover:bg-zinc-800"
               onClick={() => setImportOpen(true)}
@@ -554,6 +570,7 @@ export default function Home() {
         onReset={resetToSample}
         error={error}
       />
+      <InfoModal open={infoOpen} onClose={() => setInfoOpen(false)} />
       <footer className="border-t bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-zinc-500">
           Built for the take-home assessment. No live prices or accounts; sample data bundled. Import is client-side and ephemeral.
@@ -769,6 +786,106 @@ function ImportModal({
               Download sample prices.csv
             </a>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const titleId = "info-dialog-title";
+  useEffect(() => {
+    if (open) document.body.classList.add("overflow-hidden");
+    else document.body.classList.remove("overflow-hidden");
+    return () => document.body.classList.remove("overflow-hidden");
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+      if (e.key === "Tab") {
+        const modal = document.getElementById("info-modal");
+        if (!modal) return;
+        const focusables = modal.querySelectorAll<HTMLElement>(
+          'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div id="info-modal" className="relative z-10 w-[95%] max-w-2xl rounded-md border bg-white p-4 shadow-lg outline-none">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 id={titleId} className="text-lg font-semibold">
+            About & Calculation Rules
+          </h2>
+          <button className="rounded-md border px-2 py-1 text-sm hover:bg-zinc-50" onClick={onClose} aria-label="Close info dialog">
+            Close
+          </button>
+        </div>
+        <div className="prose prose-zinc max-w-none text-sm">
+          <p className="m-0">
+            This app shows portfolio holdings and P&L using weighted‑average cost basis. All math uses Decimal for precision; API returns decimal strings.
+            Values are rounded only for display (currency 2dp, quantity up to 8dp, percent 2dp).
+          </p>
+          <h3 className="mt-3 mb-1 text-base font-medium">Processing</h3>
+          <ul className="mt-0 mb-2 list-disc pl-5">
+            <li>Per‑asset, in ascending timestamp order</li>
+            <li>Weighted‑average cost basis</li>
+          </ul>
+          <h3 className="mt-3 mb-1 text-base font-medium">BUY</h3>
+          <ul className="mt-0 mb-2 list-disc pl-5">
+            <li>gross = quantity × price</li>
+            <li>cost added = gross + fee (fee capitalized)</li>
+            <li>new quantity = prev qty + buy qty</li>
+            <li>new cost basis = prev cost basis + cost added</li>
+            <li>average cost = new cost basis ÷ new quantity</li>
+          </ul>
+          <h3 className="mt-3 mb-1 text-base font-medium">SELL</h3>
+          <ul className="mt-0 mb-2 list-disc pl-5">
+            <li>gross proceeds = quantity × price</li>
+            <li>net proceeds = gross − fee</li>
+            <li>cost removed = average cost (before sale) × sell qty</li>
+            <li>realized P&amp;L = net proceeds − cost removed</li>
+            <li>avg cost unchanged for remainder; on full close, qty and cost basis reset to 0</li>
+          </ul>
+          <h3 className="mt-3 mb-1 text-base font-medium">Current valuation</h3>
+          <ul className="mt-0 mb-2 list-disc pl-5">
+            <li>value = qty × current price</li>
+            <li>unrealized = value − cost basis</li>
+            <li>total P&amp;L = realized + unrealized</li>
+            <li>allocation = asset value ÷ portfolio value</li>
+            <li>total fees = sum of all BUY + SELL fees</li>
+          </ul>
+          <h3 className="mt-3 mb-1 text-base font-medium">Import validation</h3>
+          <ul className="mt-0 mb-0 list-disc pl-5">
+            <li>Required columns present; timestamps valid</li>
+            <li>Supported exchange, symbol, side</li>
+            <li>Quantity &gt; 0, price &gt; 0; fee ≥ 0</li>
+            <li>trade_id unique; SELL never exceeds available qty</li>
+            <li>All‑or‑nothing: any error aborts import</li>
+          </ul>
         </div>
       </div>
     </div>
