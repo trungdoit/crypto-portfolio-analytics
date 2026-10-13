@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import { AdjustmentsHorizontalIcon, ArrowDownTrayIcon, ArrowPathIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import type { PortfolioDTO } from "@/lib/serialize";
+import { colorForAsset, withAlpha } from "@/lib/colors";
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
@@ -320,7 +321,13 @@ export default function Home() {
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={allocationData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} />
+                      <Pie data={allocationData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
+                        {allocationData.map((entry) => (
+                          // Stable color per asset
+                          <Cell key={entry.name} fill={colorForAsset(entry.name)} />
+                        ))}
+                      </Pie>
+                      <Legend />
                       <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
@@ -336,8 +343,16 @@ export default function Home() {
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="realized" fill="#0ea5e9" />
-                      <Bar dataKey="unrealized" fill="#10b981" />
+                      <Bar dataKey="realized">
+                        {pnlByAsset.map((entry) => (
+                          <Cell key={`realized-${entry.symbol}`} fill={colorForAsset(entry.symbol)} />
+                        ))}
+                      </Bar>
+                      <Bar dataKey="unrealized">
+                        {pnlByAsset.map((entry) => (
+                          <Cell key={`unrealized-${entry.symbol}`} fill={withAlpha(colorForAsset(entry.symbol), 0.45)} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
