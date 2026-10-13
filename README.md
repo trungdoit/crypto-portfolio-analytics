@@ -60,14 +60,17 @@ Precision and rounding decisions
 
 Features
 - KPIs: Portfolio value, Cost basis, Realized P&L, Unrealized P&L, Total P&L, Total fees.
-- Holdings table: Quantity, Avg cost, Price, Cost basis, Value, Realized, Unrealized, Total P&L, Allocation. Closed assets stay visible if realized P&L ≠ 0.
+- Tabbed layout:
+  - Open positions (current holdings): Quantity, Avg cost, Price, Cost basis, Value, Realized, Unrealized, Total P&L, Allocation.
+  - Closed positions (lifecycle): Asset, Opened, Closed, Trade count, Peak qty, Total cost, Proceeds, Realized P&L, Fees.
+  - Transactions: Filter by asset, exchange, side, date range; sort by timestamp; pagination; shows Gross, Fee, Realized P&L, Avg cost after, Qty after; totals footer for Gross and Fees.
 - Charts: Allocation by value; Realized vs Unrealized P&L by asset. Handles negatives.
-- Transaction explorer: Filter by asset, exchange, side, date range; sort by timestamp; pagination; shows all fields + gross value + fees.
+- Clicking any row in Open or Closed opens a modal with per-position KPIs and its transaction history (qty/avg cost after, realized delta and cumulative).
 - States: Loading, empty, invalid import, missing prices, unexpected error. Gain/loss indicated by sign and icon, not just color.
 
 Testing
 - One command: npm test
-- Unit tests: multiple BUYs, BUY fee included in avg cost, partial SELL, SELL fee reduces proceeds, full close then rebuy, short-sell rejection, invalid/duplicate rows.
+- Unit tests: multiple BUYs, BUY fee included in avg cost, partial SELL, SELL fee reduces proceeds, full close then rebuy, short-sell rejection, invalid/duplicate rows. Positions engine tests cover: position splitting (full close then rebuy creates two positions), partial sells remain one position, open-position aggregation equals holdings, sum of realized across all positions equals portfolio realized, and modal data consistency (last cumulative realized equals position realized on closed positions).
 - Reconciliation test against the full dataset (weighted-average per spec) asserts:
   - Totals: value 60620.89, cost basis 59969.24, realized -5052.96, unrealized 651.65, total P&L -4401.31, fees 2708.86
   - Per asset (qty, cost basis, value, realized, unrealized, fees):

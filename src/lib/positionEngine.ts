@@ -1,5 +1,5 @@
 import Decimal from "decimal.js";
-import type { Trade } from "./types";
+import type { PricesSnapshot, Trade, Position, PositionTradeSnapshot } from "./types";
 
 export type PositionHistoryEntry = {
   tradeId: string;
@@ -135,3 +135,114 @@ export function buildPositionHistory(trades: Trade[]): PositionHistoryEntry[] {
   return entries;
 }
 
+/**
+ * Derive lifecycle positions from position history. This builds strictly on top of
+ * buildPositionHistory to ensure consistency with the weighted-average engine.
+ */
+export function resolvePositions(trades: Trade[], prices: PricesSnapshot): Position[] {
+  const history = buildPositionHistory(trades);
+  // Group history by symbol in ascending timestamp order (already sorted)
+  const bySymbol = new Map<"BTC" | "ETH" | "SOL" | "CKB" | "DOGE", PositionHistoryEntry[]>();
+  for (const sym of ["BTC", "ETH", "SOL", "CKB", "DOGE"] as const) bySymbol.set(sym, []);
+  for (const h of history) bySymbol.get(h.symbol)!.push(h);
+
+  const positions: Position[] = [];
+  for (const sym of ["BTC", "ETH", "SOL", "CKB", "DOGE"] as const) {
+    const list = bySymbol.get(sym)!;
+    if (list.length === 0) continue;
+    let currentId = 0;
+    // State for the currently-open position segment
+    let openTrades: PositionTradeSnapshot[] = [];
+    let openedAt: string | null = null;
+    let peakQty = new Decimal(0);
+    let lastQty = new Decimal(0);
+    let lastAvg = new Decimal(0);
+    let lastCb = new Decimal(0);
+    let realizedWithin = new Decimal(0);
+    let totalFeesWithin = new Decimal(0);
+
+    const flushIfAny = (closedAt: string | null) => {
+      if (openedAt == null) return;
+      const status = lastQty.equals(0) ? "CLOSED" : "OPEN";
+      const price = prices.pricesBySymbol[sym];
+      const value = status === "OPEN" && price ? lastQty.mul(price) : new Decimal(0);
+      const unreal = status === "OPEN" ? value.sub(lastCb) : new Decimal(0);
+      positions.push({
+        id: `${sym}-${++currentId}`,
+        asset: sym,
+        status,
+        openedAt,
+        closedAt: status === "CLOSED" ? closedAt : null,
+        tradeCount: openTrades.length,
+        trades: openTrades,
+        currentQuantity: lastQty,
+        peakQuantity: peakQty,
+        averageCost: lastAvg,
+        costBasis: lastCb,
+        realizedPnL: realizedWithin,
+        unrealizedPnL: unreal,
+        totalFees: totalFeesWithin,
+      });
+      // reset
+      openTrades = [];
+      openedAt = null;
+      peakQty = new Decimal(0);
+      lastQty = new Decimal(0);
+      lastAvg = new Decimal(0);
+      lastCb = new Decimal(0);
+      realizedWithin = new Decimal(0);
+      totalFeesWithin = new Decimal(0);
+    };
+
+    for (const e of list) {
+      // Start a new position on first BUY when currently closed
+      if (openedAt == null) {
+        if (e.side !== "BUY") {
+          // Defensive: skip stray SELL (shouldn't happen after validation)
+          continue;
+        }
+        openedAt = e.timestamp;
+      }
+      // Snapshot for this trade within the current position
+      const realizedDelta = e.realizedPnl;
+      realizedWithin = realizedWithin.add(realizedDelta);
+      totalFeesWithin = totalFeesWithin.add(e.fee);
+      lastQty = e.qtyAfter;
+      lastAvg = e.avgCostAfter;
+      lastCb = e.costBasisAfter;
+      if (lastQty.greaterThan(peakQty)) peakQty = lastQty;
+
+      const snap: PositionTradeSnapshot = {
+        tradeId: e.tradeId,
+        timestamp: e.timestamp,
+        side: e.side,
+        quantity: e.quantity,
+        priceUsd: e.priceUsd,
+        feeUsd: e.feeUsd,
+        afterQuantity: e.qtyAfter,
+        afterAverageCost: e.avgCostAfter,
+        afterCostBasis: e.costBasisAfter,
+        realizedDelta,
+        cumulativeRealized: realizedWithin,
+      };
+      openTrades.push(snap);
+
+      // If fully closed after this trade, flush position
+      if (e.qtyAfter.equals(0)) {
+        flushIfAny(e.timestamp);
+      }
+    }
+    // If position remains open at the end, flush as OPEN
+    if (openedAt != null) {
+      flushIfAny(null);
+    }
+  }
+
+  // Sort for stable display: by asset, then openedAt asc, then id.
+  positions.sort((a, b) => {
+    if (a.asset !== b.asset) return a.asset.localeCompare(b.asset);
+    if (a.openedAt !== b.openedAt) return a.openedAt < b.openedAt ? -1 : 1;
+    return a.id.localeCompare(b.id);
+  });
+  return positions;
+}

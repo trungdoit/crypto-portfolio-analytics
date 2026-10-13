@@ -101,3 +101,38 @@ export function toDecimalString(d: Decimal): string {
   return new Decimal(d).toFixed(); // no rounding by default
 }
 
+// Positions engine types
+export type PositionStatus = "OPEN" | "CLOSED";
+
+export type PositionTradeSnapshot = {
+  tradeId: string;
+  timestamp: string; // ISO-8601
+  side: "BUY" | "SELL";
+  quantity: Decimal; // trade quantity
+  priceUsd: Decimal; // trade price
+  feeUsd: Decimal; // trade fee
+  // After-trade state within the position
+  afterQuantity: Decimal;
+  afterAverageCost: Decimal;
+  afterCostBasis: Decimal;
+  realizedDelta: Decimal; // realized P&L from this trade
+  cumulativeRealized: Decimal; // realized P&L within this position up to and including this trade
+};
+
+export type Position = {
+  id: string;
+  asset: "BTC" | "ETH" | "SOL" | "CKB" | "DOGE";
+  status: PositionStatus;
+  openedAt: string; // first trade timestamp in this position
+  closedAt: string | null; // when fully closed; null if open
+  tradeCount: number;
+  trades: PositionTradeSnapshot[];
+  currentQuantity: Decimal;
+  peakQuantity: Decimal;
+  averageCost: Decimal; // current average cost (0 if closed)
+  costBasis: Decimal; // current cost basis (0 if closed)
+  realizedPnL: Decimal; // realized across trades in this position
+  unrealizedPnL: Decimal; // only for OPEN positions (0 for CLOSED)
+  totalFees: Decimal;
+};
+
