@@ -33,6 +33,8 @@ export default function Home() {
   const [loadedTradesName, setLoadedTradesName] = useState<string>("trades.csv");
   const [loadedPricesName, setLoadedPricesName] = useState<string>("prices.csv");
   const [importedAt, setImportedAt] = useState<string | null>(null);
+  const [tradesFile, setTradesFile] = useState<File | null>(null);
+  const [pricesFile, setPricesFile] = useState<File | null>(null);
   const [filters, setFilters] = useState<{ symbol: string; exchange: string; side: string; from: string; to: string }>({
     symbol: "ALL",
     exchange: "ALL",
@@ -220,59 +222,126 @@ export default function Home() {
       <header className="border-b bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
           <h1 className="text-xl font-semibold">AI-Assisted Crypto Portfolio Analytics</h1>
-          <div className="flex items-center gap-2">
-            <button
-              className="inline-flex items-center gap-2 rounded-md bg-black text-white px-3 py-2 text-sm hover:bg-zinc-800"
-              onClick={() => resetToSample()}
-              title="Reset to bundled sample data"
-            >
-              <ArrowPathIcon className="h-4 w-4" />
-              Reset to sample
-            </button>
-          </div>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-6">
-        {/* Price as_of and importer */}
-        <section className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm text-zinc-600">
-              Price snapshot as of: <span className="font-medium">{asOf ?? "Unknown"}</span>
-            </p>
-            <p className="mt-1 text-sm text-zinc-600">
-              Currently loaded:{" "}
-              <span className="font-medium">
-                {loadedSource === "sample" ? "Bundled sample" : "Uploaded"}: {loadedTradesName}
-              </span>{" "}
-              ({trades ? `${trades.length} rows` : "—"}) • Imported at:{" "}
-              <span className="font-mono">{importedAt ? new Date(importedAt).toLocaleString() : "—"}</span>
-            </p>
-            {missingPrices.length > 0 && (
-              <p className="mt-1 inline-flex items-center gap-2 text-sm text-amber-700">
-                <ExclamationTriangleIcon className="h-4 w-4" />
-                Missing prices for: {missingPrices.join(", ")}
-              </p>
-            )}
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-              <a
-                className="rounded-md border px-2 py-1 hover:bg-zinc-50"
-                href="/data/trades.csv"
-                download
-                aria-label="Download sample trades.csv"
-              >
-                Download sample trades.csv
-              </a>
-              <a
-                className="rounded-md border px-2 py-1 hover:bg-zinc-50"
-                href="/data/prices.csv"
-                download
-                aria-label="Download sample prices.csv"
-              >
-                Download sample prices.csv
-              </a>
+        {/* Data & Import Card */}
+        <section className="mb-6">
+          <div className="rounded-md border bg-white p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Data & Import</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Info grid */}
+              <div>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <dt className="text-zinc-600">Data source</dt>
+                  <dd className="font-medium">
+                    {loadedSource === "sample" ? "Bundled sample" : "Uploaded"}
+                  </dd>
+                  <dt className="text-zinc-600">Trades file</dt>
+                  <dd className="font-mono truncate" title={loadedTradesName}>
+                    {loadedTradesName}
+                  </dd>
+                  <dt className="text-zinc-600">Prices file</dt>
+                  <dd className="font-mono truncate" title={loadedPricesName}>
+                    {loadedPricesName}
+                  </dd>
+                  <dt className="text-zinc-600">Rows</dt>
+                  <dd className="font-medium">{trades ? trades.length : "—"}</dd>
+                  <dt className="text-zinc-600">Imported at</dt>
+                  <dd className="font-mono">
+                    {importedAt ? new Date(importedAt).toLocaleString() : "—"}
+                  </dd>
+                  <dt className="text-zinc-600">Price as_of</dt>
+                  <dd className="font-mono">{asOf ?? "Unknown"}</dd>
+                </dl>
+                {missingPrices.length > 0 && (
+                  <p className="mt-2 inline-flex items-center gap-2 text-sm text-amber-700">
+                    <ExclamationTriangleIcon className="h-4 w-4" />
+                    Missing prices for: {missingPrices.join(", ")}
+                  </p>
+                )}
+              </div>
+              {/* File inputs */}
+              <div className="flex flex-col gap-3">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium">Trades CSV</span>
+                  <div className="flex items-center gap-2">
+                    <ArrowDownTrayIcon className="h-4 w-4" />
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] ?? null;
+                        setTradesFile(f);
+                      }}
+                      aria-label="Upload trades CSV"
+                    />
+                  </div>
+                  <span className="text-xs text-zinc-600 truncate" aria-live="polite" title={tradesFile?.name}>
+                    {tradesFile ? `Selected: ${tradesFile.name}` : "No trades file selected"}
+                  </span>
+                </label>
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium">Prices CSV (optional)</span>
+                  <div className="flex items-center gap-2">
+                    <ArrowDownTrayIcon className="h-4 w-4" />
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] ?? null;
+                        setPricesFile(f);
+                      }}
+                      aria-label="Upload prices CSV (optional)"
+                    />
+                  </div>
+                  <span className="text-xs text-zinc-600 truncate" aria-live="polite" title={pricesFile?.name}>
+                    {pricesFile ? `Selected: ${pricesFile.name}` : "No prices file selected"}
+                  </span>
+                </label>
+              </div>
+            </div>
+            {/* Actions */}
+            <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  className="rounded-md bg-black px-3 py-2 text-sm text-white hover:bg-zinc-800 disabled:opacity-50"
+                  onClick={() => handleImport(tradesFile, pricesFile)}
+                  disabled={!tradesFile}
+                >
+                  Import
+                </button>
+                <button
+                  className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-zinc-50"
+                  onClick={() => resetToSample()}
+                  title="Reset to bundled sample data"
+                >
+                  <ArrowPathIcon className="h-4 w-4" />
+                  Reset to sample
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <a
+                  className="rounded-md border px-2 py-1 hover:bg-zinc-50"
+                  href="/data/trades.csv"
+                  download
+                  aria-label="Download sample trades.csv"
+                >
+                  Download sample trades.csv
+                </a>
+                <a
+                  className="rounded-md border px-2 py-1 hover:bg-zinc-50"
+                  href="/data/prices.csv"
+                  download
+                  aria-label="Download sample prices.csv"
+                >
+                  Download sample prices.csv
+                </a>
+              </div>
             </div>
           </div>
-          <ImportControls onImport={handleImport} />
         </section>
 
         {/* Loading / error / empty states */}
@@ -584,42 +653,4 @@ function Td({ children, className = "" }: { children: React.ReactNode; className
   return <td className={`px-3 py-2 ${className}`}>{children}</td>;
 }
 
-function ImportControls({ onImport }: { onImport: (trades: File | null, prices: File | null) => void }) {
-  const [tradesFile, setTradesFile] = useState<File | null>(null);
-  const [pricesFile, setPricesFile] = useState<File | null>(null);
-  return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <label className="flex items-center gap-2 text-sm">
-        <ArrowDownTrayIcon className="h-4 w-4" />
-        <input
-          type="file"
-          accept=".csv"
-          onChange={(e) => setTradesFile(e.target.files?.[0] ?? null)}
-          aria-label="Upload trades CSV"
-        />
-      </label>
-      <span className="text-xs text-zinc-600" aria-live="polite">
-        {tradesFile ? `Selected: ${tradesFile.name}` : "No trades file selected"}
-      </span>
-      <label className="flex items-center gap-2 text-sm">
-        <ArrowDownTrayIcon className="h-4 w-4" />
-        <input
-          type="file"
-          accept=".csv"
-          onChange={(e) => setPricesFile(e.target.files?.[0] ?? null)}
-          aria-label="Upload prices CSV (optional)"
-        />
-      </label>
-      <span className="text-xs text-zinc-600" aria-live="polite">
-        {pricesFile ? `Selected: ${pricesFile.name}` : "No prices file selected"}
-      </span>
-      <button
-        className="rounded-md bg-black px-3 py-2 text-sm text-white hover:bg-zinc-800 disabled:opacity-50"
-        onClick={() => onImport(tradesFile, pricesFile)}
-        disabled={!tradesFile}
-      >
-        Import
-      </button>
-    </div>
-  );
-}
+// end
