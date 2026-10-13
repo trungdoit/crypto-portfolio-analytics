@@ -55,7 +55,7 @@ export default function Home() {
   });
   const [page, setPage] = useState(1);
   const pageSize = 20;
-  const [holdingsTab, setHoldingsTab] = useState<"open" | "closed">("open");
+  const [activeTab, setActiveTab] = useState<"open" | "closed" | "transactions">("open");
   const [selectedPositionId, setSelectedPositionId] = useState<string | null>(null);
 
   async function loadSample() {
@@ -374,29 +374,76 @@ export default function Home() {
               <Kpi title="Total Fees" value={formatCurrency(new Decimal(portfolio.totals.fees || "0"))} />
             </section>
 
-            {/* Positions (Holdings) */}
-            <section className="mb-8">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold">Positions</h2>
-                  <div className="ml-2 inline-flex items-center gap-2">
-                    <button
-                      className={`rounded-md border px-2 py-1 text-xs ${holdingsTab === "open" ? "bg-black text-white border-black" : "bg-white hover:bg-zinc-50"}`}
-                      onClick={() => setHoldingsTab("open")}
-                    >
-                      Open positions
-                    </button>
-                    <button
-                      className={`rounded-md border px-2 py-1 text-xs ${holdingsTab === "closed" ? "bg-black text-white border-black" : "bg-white hover:bg-zinc-50"}`}
-                      onClick={() => setHoldingsTab("closed")}
-                    >
-                      Closed positions
-                    </button>
-                  </div>
+            {/* Positions & Explorer tabs will render below charts */}
+
+            {/* Charts */}
+            <section className="grid grid-cols-1 gap-6 md:grid-cols-2 mb-10">
+              <div className="rounded-md border bg-white p-4">
+                <h3 className="mb-2 font-medium">Allocation by Value</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={allocationData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
+                        {allocationData.map((entry) => (
+                          // Stable color per asset
+                          <Cell key={entry.name} fill={colorForAsset(entry.name)} />
+                        ))}
+                      </Pie>
+                      <Legend />
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-                <span className="text-xs text-zinc-600">Sign and arrow indicate gain/loss</span>
               </div>
-              {holdingsTab === "open" ? (
+              <div className="rounded-md border bg-white p-4">
+                <h3 className="mb-2 font-medium">Realized vs Unrealized P&L</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={pnlByAsset}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="symbol" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="realized">
+                        {pnlByAsset.map((entry) => (
+                          <Cell key={`realized-${entry.symbol}`} fill={colorForAsset(entry.symbol)} />
+                        ))}
+                      </Bar>
+                      <Bar dataKey="unrealized">
+                        {pnlByAsset.map((entry) => (
+                          <Cell key={`unrealized-${entry.symbol}`} fill={withAlpha(colorForAsset(entry.symbol), 0.45)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </section>
+
+            {/* Open positions | Closed positions | Transaction Explorer */}
+            <section className="mb-24">
+              <div className="mb-3 flex items-center gap-2">
+                <button
+                  className={`rounded-md border px-3 py-1.5 text-sm ${activeTab === "open" ? "bg-black text-white border-black" : "bg-white hover:bg-zinc-50"}`}
+                  onClick={() => setActiveTab("open")}
+                >
+                  Open positions
+                </button>
+                <button
+                  className={`rounded-md border px-3 py-1.5 text-sm ${activeTab === "closed" ? "bg-black text-white border-black" : "bg-white hover:bg-zinc-50"}`}
+                  onClick={() => setActiveTab("closed")}
+                >
+                  Closed positions
+                </button>
+                <button
+                  className={`rounded-md border px-3 py-1.5 text-sm ${activeTab === "transactions" ? "bg-black text-white border-black" : "bg-white hover:bg-zinc-50"}`}
+                  onClick={() => setActiveTab("transactions")}
+                >
+                  Transaction Explorer
+                </button>
+              </div>
+              {activeTab === "open" && (
                 <div className="overflow-x-auto rounded-md border bg-white">
                   <table className="min-w-full text-sm">
                     <thead className="bg-zinc-50 text-left">
@@ -449,7 +496,8 @@ export default function Home() {
                     </tbody>
                   </table>
                 </div>
-              ) : (
+              )}
+              {activeTab === "closed" && (
                 <div className="overflow-x-auto rounded-md border bg-white">
                   <table className="min-w-full text-sm">
                     <thead className="bg-zinc-50 text-left">
@@ -500,54 +548,163 @@ export default function Home() {
                   </table>
                 </div>
               )}
+              {activeTab === "transactions" && (
+                <>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Transaction Explorer</h2>
+                    <div className="flex items-center gap-2 text-sm text-zinc-600">
+                      <AdjustmentsHorizontalIcon className="h-4 w-4" />
+                      Filters
+                    </div>
+                  </div>
+                  <div className="mb-3 grid grid-cols-2 md:grid-cols-6 gap-2">
+                    <select
+                      className="rounded-md border px-2 py-1 text-sm"
+                      value={filters.symbol}
+                      onChange={(e) => {
+                        setFilters((f) => ({ ...f, symbol: e.target.value }));
+                        setPage(1);
+                      }}
+                    >
+                      <option value="ALL">All assets</option>
+                      {["BTC", "ETH", "SOL", "CKB", "DOGE"].map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="rounded-md border px-2 py-1 text-sm"
+                      value={filters.exchange}
+                      onChange={(e) => {
+                        setFilters((f) => ({ ...f, exchange: e.target.value }));
+                        setPage(1);
+                      }}
+                    >
+                      <option value="ALL">All exchanges</option>
+                      {["Binance", "Coinbase"].map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="rounded-md border px-2 py-1 text-sm"
+                      value={filters.side}
+                      onChange={(e) => {
+                        setFilters((f) => ({ ...f, side: e.target.value }));
+                        setPage(1);
+                      }}
+                    >
+                      <option value="ALL">All sides</option>
+                      {["BUY", "SELL"].map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="date"
+                      className="rounded-md border px-2 py-1 text-sm"
+                      value={filters.from}
+                      onChange={(e) => {
+                        setFilters((f) => ({ ...f, from: e.target.value }));
+                        setPage(1);
+                      }}
+                    />
+                    <input
+                      type="date"
+                      className="rounded-md border px-2 py-1 text-sm"
+                      value={filters.to}
+                      onChange={(e) => {
+                        setFilters((f) => ({ ...f, to: e.target.value }));
+                        setPage(1);
+                      }}
+                    />
+                    <div className="flex items-center justify-end">
+                      <button
+                        className="rounded-md border px-2 py-1 text-sm"
+                        onClick={() => {
+                          setFilters({ symbol: "ALL", exchange: "ALL", side: "ALL", from: "", to: "" });
+                          setPage(1);
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto rounded-md border bg-white">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-zinc-50 text-left">
+                        <tr>
+                          <Th>ID</Th>
+                          <Th>Time</Th>
+                          <Th>Exchange</Th>
+                          <Th>Asset</Th>
+                          <Th>Side</Th>
+                          <Th>Qty</Th>
+                          <Th>Price</Th>
+                          <Th>Gross</Th>
+                          <Th>Fee</Th>
+                          <Th>Realized P&amp;L</Th>
+                          <Th>Avg cost after</Th>
+                          <Th>Qty after</Th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageItems.map((t) => {
+                          const gross = t.quantity.mul(t.priceUsd);
+                          const h = historyMap.get(t.tradeId) || null;
+                          const realized = h ? new Decimal(h.realizedPnl) : new Decimal(0);
+                          const avgAfter = h ? new Decimal(h.avgCostAfter) : null;
+                          const qtyAfter = h ? new Decimal(h.qtyAfter) : null;
+                          return (
+                            <tr key={t.tradeId} className="border-t">
+                              <Td className="font-mono">{t.tradeId}</Td>
+                              <Td>{new Date(t.timestamp).toLocaleString()}</Td>
+                              <Td>{t.exchange}</Td>
+                              <Td>{t.symbol}</Td>
+                              <Td className={t.side === "BUY" ? "text-emerald-700" : "text-blue-700"}>{t.side}</Td>
+                              <Td>{formatQuantity(t.quantity)}</Td>
+                              <Td>{formatCurrency(t.priceUsd)}</Td>
+                              <Td>{formatCurrency(gross)}</Td>
+                              <Td>{formatCurrency(t.feeUsd)}</Td>
+                              <Td className={t.side === "SELL" && realized.isNegative() ? "text-red-700" : "text-emerald-700"}>
+                                {t.side === "SELL" ? formatCurrency(realized) : "—"}
+                              </Td>
+                              <Td>{avgAfter ? formatCurrency(avgAfter) : "—"}</Td>
+                              <Td>{qtyAfter ? formatQuantity(qtyAfter) : "—"}</Td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
+                    <span className="text-sm text-zinc-600">Page {page} of {totalPages} • {filteredTrades.length} transactions</span>
+                    <span className="text-sm text-zinc-700">
+                      Total (filtered): Gross {formatCurrency(totalsForFilter.gross)} • Fees {formatCurrency(totalsForFilter.fees)}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="rounded-md border px-2 py-1 text-sm disabled:opacity-50"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                      >
+                        Prev
+                      </button>
+                      <button
+                        className="rounded-md border px-2 py-1 text-sm disabled:opacity-50"
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </section>
-
-            {/* Charts */}
-            <section className="grid grid-cols-1 gap-6 md:grid-cols-2 mb-10">
-              <div className="rounded-md border bg-white p-4">
-                <h3 className="mb-2 font-medium">Allocation by Value</h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={allocationData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
-                        {allocationData.map((entry) => (
-                          // Stable color per asset
-                          <Cell key={entry.name} fill={colorForAsset(entry.name)} />
-                        ))}
-                      </Pie>
-                      <Legend />
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              <div className="rounded-md border bg-white p-4">
-                <h3 className="mb-2 font-medium">Realized vs Unrealized P&L</h3>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={pnlByAsset}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="symbol" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="realized">
-                        {pnlByAsset.map((entry) => (
-                          <Cell key={`realized-${entry.symbol}`} fill={colorForAsset(entry.symbol)} />
-                        ))}
-                      </Bar>
-                      <Bar dataKey="unrealized">
-                        {pnlByAsset.map((entry) => (
-                          <Cell key={`unrealized-${entry.symbol}`} fill={withAlpha(colorForAsset(entry.symbol), 0.45)} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </section>
-
-            {/* end of tabbed section */}
           </>
         )}
       </main>
