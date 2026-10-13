@@ -240,6 +240,12 @@ export default function Home() {
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-6">
+        {/* Price as_of lightweight indicator */}
+        <section className="mb-4">
+          <p className="text-xs text-zinc-600">
+            Price snapshot as of: <span className="font-mono">{asOf ?? "Unknown"}</span>
+          </p>
+        </section>
         {/* Modal trigger is in header; indicator badge shown. */}
 
         {/* Loading / error / empty states */}
