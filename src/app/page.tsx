@@ -35,6 +35,7 @@ export default function Home() {
   const [importedAt, setImportedAt] = useState<string | null>(null);
   const [tradesFile, setTradesFile] = useState<File | null>(null);
   const [pricesFile, setPricesFile] = useState<File | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [filters, setFilters] = useState<{ symbol: string; exchange: string; side: string; from: string; to: string }>({
     symbol: "ALL",
     exchange: "ALL",
@@ -221,128 +222,25 @@ export default function Home() {
     <div className="min-h-screen w-full bg-zinc-50 text-zinc-900">
       <header className="border-b bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold">AI-Assisted Crypto Portfolio Analytics</h1>
+          <h1 className="text-xl font-semibold">Crypto Portfolio Analytics</h1>
+          <div className="flex items-center gap-2">
+            <span className="text-xs rounded-full border px-2 py-0.5 text-zinc-700 bg-zinc-50">
+              {loadedSource === "sample" ? "Sample data" : "Uploaded data"}
+            </span>
+            <button
+              className="inline-flex items-center gap-2 rounded-md bg-black text-white px-3 py-2 text-sm hover:bg-zinc-800"
+              onClick={() => setImportOpen(true)}
+              title="Open import dialog"
+              aria-haspopup="dialog"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4" />
+              Import data
+            </button>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-4 py-6">
-        {/* Data & Import Card */}
-        <section className="mb-6">
-          <div className="rounded-md border bg-white p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Data & Import</h2>
-            </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {/* Info grid */}
-              <div>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                  <dt className="text-zinc-600">Data source</dt>
-                  <dd className="font-medium">
-                    {loadedSource === "sample" ? "Bundled sample" : "Uploaded"}
-                  </dd>
-                  <dt className="text-zinc-600">Trades file</dt>
-                  <dd className="font-mono truncate" title={loadedTradesName}>
-                    {loadedTradesName}
-                  </dd>
-                  <dt className="text-zinc-600">Prices file</dt>
-                  <dd className="font-mono truncate" title={loadedPricesName}>
-                    {loadedPricesName}
-                  </dd>
-                  <dt className="text-zinc-600">Rows</dt>
-                  <dd className="font-medium">{trades ? trades.length : "—"}</dd>
-                  <dt className="text-zinc-600">Imported at</dt>
-                  <dd className="font-mono">
-                    {importedAt ? new Date(importedAt).toLocaleString() : "—"}
-                  </dd>
-                  <dt className="text-zinc-600">Price as_of</dt>
-                  <dd className="font-mono">{asOf ?? "Unknown"}</dd>
-                </dl>
-                {missingPrices.length > 0 && (
-                  <p className="mt-2 inline-flex items-center gap-2 text-sm text-amber-700">
-                    <ExclamationTriangleIcon className="h-4 w-4" />
-                    Missing prices for: {missingPrices.join(", ")}
-                  </p>
-                )}
-              </div>
-              {/* File inputs */}
-              <div className="flex flex-col gap-3">
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium">Trades CSV</span>
-                  <div className="flex items-center gap-2">
-                    <ArrowDownTrayIcon className="h-4 w-4" />
-                    <input
-                      type="file"
-                      accept=".csv"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0] ?? null;
-                        setTradesFile(f);
-                      }}
-                      aria-label="Upload trades CSV"
-                    />
-                  </div>
-                  <span className="text-xs text-zinc-600 truncate" aria-live="polite" title={tradesFile?.name}>
-                    {tradesFile ? `Selected: ${tradesFile.name}` : "No trades file selected"}
-                  </span>
-                </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium">Prices CSV (optional)</span>
-                  <div className="flex items-center gap-2">
-                    <ArrowDownTrayIcon className="h-4 w-4" />
-                    <input
-                      type="file"
-                      accept=".csv"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0] ?? null;
-                        setPricesFile(f);
-                      }}
-                      aria-label="Upload prices CSV (optional)"
-                    />
-                  </div>
-                  <span className="text-xs text-zinc-600 truncate" aria-live="polite" title={pricesFile?.name}>
-                    {pricesFile ? `Selected: ${pricesFile.name}` : "No prices file selected"}
-                  </span>
-                </label>
-              </div>
-            </div>
-            {/* Actions */}
-            <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  className="rounded-md bg-black px-3 py-2 text-sm text-white hover:bg-zinc-800 disabled:opacity-50"
-                  onClick={() => handleImport(tradesFile, pricesFile)}
-                  disabled={!tradesFile}
-                >
-                  Import
-                </button>
-                <button
-                  className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-zinc-50"
-                  onClick={() => resetToSample()}
-                  title="Reset to bundled sample data"
-                >
-                  <ArrowPathIcon className="h-4 w-4" />
-                  Reset to sample
-                </button>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <a
-                  className="rounded-md border px-2 py-1 hover:bg-zinc-50"
-                  href="/data/trades.csv"
-                  download
-                  aria-label="Download sample trades.csv"
-                >
-                  Download sample trades.csv
-                </a>
-                <a
-                  className="rounded-md border px-2 py-1 hover:bg-zinc-50"
-                  href="/data/prices.csv"
-                  download
-                  aria-label="Download sample prices.csv"
-                >
-                  Download sample prices.csv
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* Modal trigger is in header; indicator badge shown. */}
 
         {/* Loading / error / empty states */}
         {loading && (
@@ -628,11 +526,245 @@ export default function Home() {
           </>
         )}
       </main>
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        state={{
+          loadedSource,
+          loadedTradesName,
+          loadedPricesName,
+          trades,
+          importedAt,
+          asOf,
+          missingPrices,
+          tradesFile,
+          pricesFile,
+        }}
+        setState={{
+          setTradesFile,
+          setPricesFile,
+        }}
+        onImport={handleImport}
+        onReset={resetToSample}
+        error={error}
+      />
       <footer className="border-t bg-white">
         <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-zinc-500">
           Built for the take-home assessment. No live prices or accounts; sample data bundled. Import is client-side and ephemeral.
         </div>
       </footer>
+    </div>
+  );
+}
+
+function ImportModal({
+  open,
+  onClose,
+  state,
+  setState,
+  onImport,
+  onReset,
+  error,
+}: {
+  open: boolean;
+  onClose: () => void;
+  state: {
+    loadedSource: "sample" | "uploaded";
+    loadedTradesName: string;
+    loadedPricesName: string;
+    trades: Trade[] | null;
+    importedAt: string | null;
+    asOf: string | null;
+    missingPrices: string[];
+    tradesFile: File | null;
+    pricesFile: File | null;
+  };
+  setState: {
+    setTradesFile: (f: File | null) => void;
+    setPricesFile: (f: File | null) => void;
+  };
+  onImport: (t: File | null, p: File | null) => void;
+  onReset: () => void;
+  error: string | null;
+}) {
+  const containerId = "import-dialog-title";
+  useEffect(() => {
+    if (open) {
+      document.body.classList.add("overflow-hidden");
+    } else {
+      document.body.classList.remove("overflow-hidden");
+    }
+    return () => document.body.classList.remove("overflow-hidden");
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+      if (e.key === "Tab") {
+        // trap focus
+        const modal = document.getElementById("import-modal");
+        if (!modal) return;
+        const focusables = modal.querySelectorAll<HTMLElement>(
+          'a[href], button, textarea, input[type="text"], input[type="file"], input[type="date"], select, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            last.focus();
+            e.preventDefault();
+          }
+        } else {
+          if (document.activeElement === last) {
+            first.focus();
+            e.preventDefault();
+          }
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={containerId}
+    >
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div
+        id="import-modal"
+        className="relative z-10 w-[95%] max-w-3xl rounded-md border bg-white p-4 shadow-lg outline-none"
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h2 id={containerId} className="text-lg font-semibold">
+            Import data
+          </h2>
+          <button
+            className="rounded-md border px-2 py-1 text-sm hover:bg-zinc-50"
+            onClick={onClose}
+            aria-label="Close import dialog"
+          >
+            Close
+          </button>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <dt className="text-zinc-600">Data source</dt>
+              <dd className="font-medium">
+                {state.loadedSource === "sample" ? "Bundled sample" : "Uploaded"}
+              </dd>
+              <dt className="text-zinc-600">Trades file</dt>
+              <dd className="font-mono truncate" title={state.loadedTradesName}>
+                {state.loadedTradesName}
+              </dd>
+              <dt className="text-zinc-600">Prices file</dt>
+              <dd className="font-mono truncate" title={state.loadedPricesName}>
+                {state.loadedPricesName}
+              </dd>
+              <dt className="text-zinc-600">Rows</dt>
+              <dd className="font-medium">{state.trades ? state.trades.length : "—"}</dd>
+              <dt className="text-zinc-600">Imported at</dt>
+              <dd className="font-mono">
+                {state.importedAt ? new Date(state.importedAt).toLocaleString() : "—"}
+              </dd>
+              <dt className="text-zinc-600">Price as_of</dt>
+              <dd className="font-mono">{state.asOf ?? "Unknown"}</dd>
+            </dl>
+            {state.missingPrices.length > 0 && (
+              <p className="mt-2 inline-flex items-center gap-2 text-sm text-amber-700">
+                <ExclamationTriangleIcon className="h-4 w-4" />
+                Missing prices for: {state.missingPrices.join(", ")}
+              </p>
+            )}
+            {error && (
+              <div
+                role="alert"
+                aria-live="polite"
+                className="mt-3 rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-800"
+              >
+                {error}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium">Trades CSV</span>
+              <div className="flex items-center gap-2">
+                <ArrowDownTrayIcon className="h-4 w-4" />
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setState.setTradesFile(e.target.files?.[0] ?? null)}
+                  aria-label="Upload trades CSV"
+                />
+              </div>
+              <span className="text-xs text-zinc-600 truncate" aria-live="polite" title={state.tradesFile?.name}>
+                {state.tradesFile ? `Selected: ${state.tradesFile.name}` : "No trades file selected"}
+              </span>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium">Prices CSV (optional)</span>
+              <div className="flex items-center gap-2">
+                <ArrowDownTrayIcon className="h-4 w-4" />
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setState.setPricesFile(e.target.files?.[0] ?? null)}
+                  aria-label="Upload prices CSV (optional)"
+                />
+              </div>
+              <span className="text-xs text-zinc-600 truncate" aria-live="polite" title={state.pricesFile?.name}>
+                {state.pricesFile ? `Selected: ${state.pricesFile.name}` : "No prices file selected"}
+              </span>
+            </label>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              className="rounded-md bg-black px-3 py-2 text-sm text-white hover:bg-zinc-800 disabled:opacity-50"
+              onClick={() => onImport(state.tradesFile, state.pricesFile)}
+              disabled={!state.tradesFile}
+            >
+              Import
+            </button>
+            <button
+              className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-zinc-50"
+              onClick={onReset}
+              title="Reset to bundled sample data"
+            >
+              <ArrowPathIcon className="h-4 w-4" />
+              Reset to sample
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <a
+              className="rounded-md border px-2 py-1 hover:bg-zinc-50"
+              href="/data/trades.csv"
+              download
+              aria-label="Download sample trades.csv"
+            >
+              Download sample trades.csv
+            </a>
+            <a
+              className="rounded-md border px-2 py-1 hover:bg-zinc-50"
+              href="/data/prices.csv"
+              download
+              aria-label="Download sample prices.csv"
+            >
+              Download sample prices.csv
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
