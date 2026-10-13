@@ -25,7 +25,7 @@ import {
   InformationCircleIcon,
   CircleStackIcon,
 } from "@heroicons/react/24/outline";
-import type { PortfolioDTO } from "@/lib/serialize";
+import type { PortfolioDTO, PositionHistoryEntryDTO } from "@/lib/serialize";
 import { colorForAsset, withAlpha } from "@/lib/colors";
 
 export default function Home() {
@@ -36,6 +36,7 @@ export default function Home() {
   const [missingPrices, setMissingPrices] = useState<string[]>([]);
   const [pricesCsv, setPricesCsv] = useState<string | null>(null);
   const [trades, setTrades] = useState<Trade[] | null>(null);
+  const [history, setHistory] = useState<PositionHistoryEntryDTO[] | null>(null);
   const [loadedSource, setLoadedSource] = useState<"sample" | "uploaded">("sample");
   const [loadedTradesName, setLoadedTradesName] = useState<string>("trades.csv");
   const [loadedPricesName, setLoadedPricesName] = useState<string>("prices.csv");
@@ -64,6 +65,7 @@ export default function Home() {
       setPortfolio(json.data);
       setAsOf(json.data.asOf);
       setMissingPrices(json.data.missingPriceSymbols ?? []);
+      setHistory(json.history ?? null);
       // Load sample CSVs too for transaction explorer and reset
       const [tCsv, pCsv] = await Promise.all([fetch("/data/trades.csv").then((r) => r.text()), fetch("/data/prices.csv").then((r) => r.text())]);
       setPricesCsv(pCsv);
@@ -110,6 +112,7 @@ export default function Home() {
           setPortfolio(json.data);
           setAsOf(json.data.asOf);
           setMissingPrices(json.data.missingPriceSymbols ?? []);
+          setHistory(json.history ?? null);
           const parsed = parseTradesCsv(savedTrades);
           if (parsed.ok) setTrades(parsed.trades);
           setError(null);
@@ -153,6 +156,7 @@ export default function Home() {
       setPortfolio(json.data);
       setAsOf(json.data.asOf);
       setMissingPrices(json.data.missingPriceSymbols ?? []);
+      setHistory(json.history ?? null);
       setPricesCsv(pCsv);
       const parsed = parseTradesCsv(tCsv);
       if (parsed.ok) setTrades(parsed.trades);
@@ -225,6 +229,17 @@ export default function Home() {
 
   const totalPages = Math.max(1, Math.ceil(filteredTrades.length / pageSize));
   const pageItems = filteredTrades.slice((page - 1) * pageSize, page * pageSize);
+  const historyMap = useMemo(() => {
+    const m = new Map<string, PositionHistoryEntryDTO>();
+    if (!history) return m;
+    for (const e of history) m.set(e.tradeId, e);
+    return m;
+  }, [history]);
+  const totalsForFilter = useMemo(() => {
+    const gross = filteredTrades.reduce((acc, t) => acc.add(t.quantity.mul(t.priceUsd)), new Decimal(0));
+    const fees = filteredTrades.reduce((acc, t) => acc.add(t.feeUsd), new Decimal(0));
+    return { gross, fees };
+  }, [filteredTrades]);
 
   return (
     <div className="min-h-screen w-full bg-zinc-50 text-zinc-900">
@@ -515,11 +530,18 @@ export default function Home() {
                       <Th>Price</Th>
                       <Th>Gross</Th>
                       <Th>Fee</Th>
+                      <Th>Realized P&amp;L</Th>
+                      <Th>Avg cost after</Th>
+                      <Th>Qty after</Th>
                     </tr>
                   </thead>
                   <tbody>
                     {pageItems.map((t) => {
                       const gross = t.quantity.mul(t.priceUsd);
+                      const h = historyMap.get(t.tradeId) || null;
+                      const realized = h ? new Decimal(h.realizedPnl) : new Decimal(0);
+                      const avgAfter = h ? new Decimal(h.avgCostAfter) : null;
+                      const qtyAfter = h ? new Decimal(h.qtyAfter) : null;
                       return (
                         <tr key={t.tradeId} className="border-t">
                           <Td className="font-mono">{t.tradeId}</Td>
@@ -531,15 +553,21 @@ export default function Home() {
                           <Td>{formatCurrency(t.priceUsd)}</Td>
                           <Td>{formatCurrency(gross)}</Td>
                           <Td>{formatCurrency(t.feeUsd)}</Td>
+                          <Td className={t.side === "SELL" && realized.isNegative() ? "text-red-700" : "text-emerald-700"}>
+                            {t.side === "SELL" ? formatCurrency(realized) : "—"}
+                          </Td>
+                          <Td>{avgAfter ? formatCurrency(avgAfter) : "—"}</Td>
+                          <Td>{qtyAfter ? formatQuantity(qtyAfter) : "—"}</Td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm text-zinc-600">
-                  Page {page} of {totalPages} • {filteredTrades.length} transactions
+              <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
+                <span className="text-sm text-zinc-600">Page {page} of {totalPages} • {filteredTrades.length} transactions</span>
+                <span className="text-sm text-zinc-700">
+                  Total (filtered): Gross {formatCurrency(totalsForFilter.gross)} • Fees {formatCurrency(totalsForFilter.fees)}
                 </span>
                 <div className="flex items-center gap-2">
                   <button

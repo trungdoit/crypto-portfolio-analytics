@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import { parsePricesCsv, parseTradesCsv } from "@/lib/import";
 import { computePortfolio } from "@/lib/portfolio";
-import { portfolioToJson } from "@/lib/serialize";
+import { portfolioToJson, positionHistoryToJson } from "@/lib/serialize";
+import { buildPositionHistory } from "@/lib/positionEngine";
 import path from "path";
 
 export async function GET() {
@@ -16,7 +17,8 @@ export async function GET() {
     }
     const prices = parsePricesCsv(pricesCsv);
     const portfolio = computePortfolio(parsedTrades.trades, prices);
-    return NextResponse.json({ ok: true, data: portfolioToJson(portfolio) }, { status: 200 });
+    const history = buildPositionHistory(parsedTrades.trades);
+    return NextResponse.json({ ok: true, data: portfolioToJson(portfolio), history: positionHistoryToJson(history) }, { status: 200 });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Failed to load sample data";
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
