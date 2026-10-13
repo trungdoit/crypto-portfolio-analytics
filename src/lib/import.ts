@@ -38,7 +38,7 @@ export function parseTradesCsv(csvText: string): ImportResult {
     skipEmptyLines: true,
     dynamicTyping: false,
     transformHeader(h) {
-      return h.trim();
+      return String(h).trim();
     },
   });
 
@@ -181,7 +181,7 @@ export function parsePricesCsv(csvText: string): PricesSnapshot {
     skipEmptyLines: true,
     dynamicTyping: false,
     transformHeader(h) {
-      return h.trim();
+      return String(h).trim();
     },
   });
 

@@ -238,24 +238,24 @@ export default function Home() {
           <>
             {/* KPIs */}
             <section className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6 mb-6">
-              <Kpi title="Portfolio Value" value={formatCurrency(new Decimal(portfolio.totals.value))} positive />
-              <Kpi title="Cost Basis" value={formatCurrency(new Decimal(portfolio.totals.costBasis))} />
+              <Kpi title="Portfolio Value" value={formatCurrency(new Decimal(portfolio.totals.value || "0"))} positive />
+              <Kpi title="Cost Basis" value={formatCurrency(new Decimal(portfolio.totals.costBasis || "0"))} />
               <Kpi
                 title="Realized P&L"
-                value={formatCurrency(new Decimal(portfolio.totals.realized))}
-                positive={new Decimal(portfolio.totals.realized).greaterThanOrEqualTo(0)}
+                value={formatCurrency(new Decimal(portfolio.totals.realized || "0"))}
+                positive={new Decimal(portfolio.totals.realized || "0").greaterThanOrEqualTo(0)}
               />
               <Kpi
                 title="Unrealized P&L"
-                value={formatCurrency(new Decimal(portfolio.totals.unrealized))}
-                positive={new Decimal(portfolio.totals.unrealized).greaterThanOrEqualTo(0)}
+                value={formatCurrency(new Decimal(portfolio.totals.unrealized || "0"))}
+                positive={new Decimal(portfolio.totals.unrealized || "0").greaterThanOrEqualTo(0)}
               />
               <Kpi
                 title="Total P&L"
-                value={formatCurrency(new Decimal(portfolio.totals.totalPnL))}
-                positive={new Decimal(portfolio.totals.totalPnL).greaterThanOrEqualTo(0)}
+                value={formatCurrency(new Decimal(portfolio.totals.totalPnL || "0"))}
+                positive={new Decimal(portfolio.totals.totalPnL || "0").greaterThanOrEqualTo(0)}
               />
-              <Kpi title="Total Fees" value={formatCurrency(new Decimal(portfolio.totals.fees))} />
+              <Kpi title="Total Fees" value={formatCurrency(new Decimal(portfolio.totals.fees || "0"))} />
             </section>
 
             {/* Holdings table */}
@@ -321,7 +321,7 @@ export default function Home() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={allocationData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} />
-                      <Tooltip formatter={(v: number, name) => [`$${v.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, name]} />
+                      <Tooltip />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>

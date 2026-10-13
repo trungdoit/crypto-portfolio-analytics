@@ -34,7 +34,7 @@ export type Trade = {
 };
 
 export type PricesSnapshot = {
-  asOf: string; // ISO-8601
+  asOf: string | null; // ISO-8601
   pricesBySymbol: Record<"BTC" | "ETH" | "SOL" | "CKB" | "DOGE", Decimal | undefined>;
   // Track which symbols are missing a price
   missingSymbols: Array<"BTC" | "ETH" | "SOL" | "CKB" | "DOGE">;
